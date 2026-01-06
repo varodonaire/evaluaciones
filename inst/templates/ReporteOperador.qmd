@@ -1,0 +1,441 @@
+---
+title: "Reporte Psicométrico"
+subtitle: "Análisis de Calidad del Instrumento"
+format:
+  pdf:
+    pdf-engine: xelatex
+    documentclass: article
+    papersize: letter
+    geometry:
+      - margin=1in
+    include-in-header:
+      - text: |
+          \usepackage{amsmath}
+          \usepackage{enumitem}
+          \setlist[enumerate]{label=\alph*)}
+          \usepackage{siunitx}
+          \usepackage{booktabs}
+          \usepackage{xcolor}
+          \definecolor{UDDblue}{RGB}{0,51,102}
+          \definecolor{goodgreen}{RGB}{34,139,34}
+          \definecolor{warnorange}{RGB}{255,140,0}
+          \definecolor{badred}{RGB}{178,34,34}
+    mainfont: "Libertinus Sans"
+    mathfont: "Libertinus Math"
+execute:
+  echo: false
+  warning: false
+params:
+  session_id: "ALL"
+  data_file: ".__session_cache2.rds"
+---
+
+```{r setup}
+#| include: false
+
+library(tidyverse)
+library(gt)
+library(showtext)
+
+# Cargar datos
+md <- readRDS(params$data_file)
+
+# Obtener análisis psicométrico
+psych <- md$psychometric
+
+# Función para corregir acentos en tablas gt para LaTeX
+fix_gt_latex_accents <- function(gt_latex_output) {
+  gt_latex_output %>%
+    str_replace_all("á", "\\\\'a") %>%
+    str_replace_all("é", "\\\\'e") %>%
+    str_replace_all("í", "\\\\'i") %>%
+    str_replace_all("ó", "\\\\'o") %>%
+    str_replace_all("ú", "\\\\'u") %>%
+    str_replace_all("ñ", "\\\\~n") %>%
+    str_replace_all("Á", "\\\\'A") %>%
+    str_replace_all("É", "\\\\'E") %>%
+    str_replace_all("Í", "\\\\'I") %>%
+    str_replace_all("Ó", "\\\\'O") %>%
+    str_replace_all("Ú", "\\\\'U") %>%
+    str_replace_all("Ñ", "\\\\~N") %>%
+    str_replace_all("ü", '\\\\"{u}') %>%
+    str_replace_all("Ü", '\\\\"{U}')
+}
+
+# Calcular resumen
+n_items <- psych$reliability$n_items
+n_students <- psych$reliability$n_students
+n_forms <- psych$form_comparison$n_forms
+n_problematic <- psych$problematic_items$n_problematic
+```
+
+## Información General
+
+```{r info-general}
+info_df <- tibble(
+  Métrica = c("Sesión analizada", 
+              "Fecha de análisis", 
+              "N° de estudiantes",
+              "N° de ítems analizados",
+              "N° de formas/versiones"),
+  Valor = c(
+    ifelse(params$session_id == "ALL", "Todas las sesiones", params$session_id),
+    format(psych$timestamp, "%d/%m/%Y %H:%M"),
+    as.character(n_students),
+    as.character(n_items),
+    as.character(n_forms)
+  )
+)
+
+info_df %>%
+  gt() %>%
+  tab_options(
+    table.width = pct(100),
+    column_labels.hidden = TRUE
+  ) %>%
+  as_latex() %>%
+  fix_gt_latex_accents()
+```
+
+## Confiabilidad del Instrumento
+
+La confiabilidad se evaluó mediante el coeficiente KR-20 (Kuder-Richardson), que es equivalente al Alpha de Cronbach para ítems dicotómicos (correcto/incorrecto).
+
+```{r reliability}
+rel <- psych$reliability
+
+rel_df <- tibble(
+  Indicador = c(
+    "Coeficiente KR-20",
+    "Error Estándar de Medida (SEM)",
+    "Clasificación",
+    "Promedio de puntaje",
+    "Desviación estándar"
+  ),
+  Valor = c(
+    sprintf("%.3f", rel$kr20),
+    sprintf("%.2f", rel$sem),
+    rel$clasificacion,
+    sprintf("%.1f / %d (%.1f%%)", rel$mean_score, n_items, 100*rel$mean_score/n_items),
+    sprintf("%.2f", rel$sd_score)
+  )
+)
+
+rel_df %>%
+  gt() %>%
+  tab_options(
+    table.width = pct(100),
+    column_labels.hidden = TRUE
+  ) %>%
+  as_latex() %>%
+  fix_gt_latex_accents()
+```
+
+**Interpretación del KR-20:**
+
+- \< 0.50: Inaceptable
+- 0.50 - 0.59: Pobre
+- 0.60 - 0.69: Cuestionable
+- 0.70 - 0.79: Aceptable
+- 0.80 - 0.89: Bueno
+- ≥ 0.90: Excelente
+
+## Análisis de Dificultad
+
+El índice de dificultad representa la proporción de estudiantes que respondieron correctamente cada ítem. Valores cercanos a 0 indican ítems muy difíciles, mientras que valores cercanos a 1 indican ítems muy fáciles. El rango ideal es entre 0.30 y 0.70.
+
+```{r difficulty-summary}
+dif <- psych$difficulty
+
+dif_summary <- dif %>%
+  count(clasificacion) %>%
+  mutate(porcentaje = sprintf("%.1f%%", 100 * n / sum(n))) %>%
+  arrange(factor(clasificacion, levels = c("Muy difícil", "Difícil", "Moderado", "Fácil", "Muy fácil")))
+
+dif_summary %>%
+  gt() %>%
+  cols_label(
+    clasificacion = "Clasificación",
+    n = "N° Ítems",
+    porcentaje = "Porcentaje"
+  ) %>%
+  tab_options(table.width = pct(100)) %>%
+  as_latex() %>%
+  fix_gt_latex_accents()
+```
+
+```{r difficulty-plot, fig.width=7, fig.height=3}
+#| fig-cap: "Distribución de índices de dificultad"
+
+ggplot(dif, aes(x = dificultad)) +
+  geom_histogram(binwidth = 0.1, fill = "#003366", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = c(0.3, 0.7), linetype = "dashed", color = "darkred") +
+  scale_x_continuous(breaks = seq(0, 1, 0.1), limits = c(0, 1)) +
+  labs(
+    x = "Índice de Dificultad",
+    y = "Frecuencia"
+  ) +
+  annotate("text", x = 0.15, y = Inf, label = "Difícil", vjust = 2, size = 3, color = "darkred") +
+  annotate("text", x = 0.5, y = Inf, label = "Óptimo", vjust = 2, size = 3, color = "darkgreen") +
+  annotate("text", x = 0.85, y = Inf, label = "Fácil", vjust = 2, size = 3, color = "darkred") +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(hjust = 0.5)
+  )
+```
+
+## Análisis de Discriminación
+
+El índice de discriminación (correlación punto-biserial) mide qué tan bien un ítem distingue entre estudiantes de alto y bajo rendimiento. Valores negativos o muy bajos sugieren que el ítem puede estar mal formulado o tener problemas con la clave de respuesta.
+
+```{r discrimination-summary}
+disc <- psych$discrimination
+
+disc_summary <- disc %>%
+  count(clasificacion) %>%
+  mutate(porcentaje = sprintf("%.1f%%", 100 * n / sum(n))) %>%
+  arrange(factor(clasificacion, levels = c("Negativa (revisar)", "Baja", "Moderada", "Buena", "Excelente", "No calculable")))
+
+disc_summary %>%
+  gt() %>%
+  cols_label(
+    clasificacion = "Clasificación",
+    n = "N° Ítems",
+    porcentaje = "Porcentaje"
+  ) %>%
+  tab_options(table.width = pct(100)) %>%
+  as_latex() %>%
+  fix_gt_latex_accents()
+```
+
+```{r discrimination-plot, fig.width=7, fig.height=3}
+#| fig-cap: "Distribución de índices de discriminación"
+
+ggplot(disc %>% filter(!is.na(discriminacion)), aes(x = discriminacion)) +
+  geom_histogram(binwidth = 0.1, fill = "#003366", color = "white", alpha = 0.7) +
+  geom_vline(xintercept = c(0.2, 0.3), linetype = "dashed", color = c("orange", "darkgreen")) +
+  geom_vline(xintercept = 0, linetype = "solid", color = "darkred") +
+  scale_x_continuous(breaks = seq(-0.5, 1, 0.1)) +
+  labs(
+    x = "Índice de Discriminación",
+    y = "Frecuencia"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(hjust = 0.5)
+  )
+```
+
+**Interpretación:**
+
+- \< 0: Negativa (revisar urgentemente)
+- 0.00 - 0.19: Baja (considerar revisión)
+- 0.20 - 0.29: Moderada (aceptable)
+- 0.30 - 0.39: Buena
+- ≥ 0.40: Excelente
+
+## Mapa Dificultad-Discriminación
+
+```{r diff-disc-map, fig.width=7, fig.height=5}
+#| fig-cap: "Relación entre dificultad y discriminación de ítems"
+
+item_data <- dif %>%
+  left_join(disc %>% select(Origen, discriminacion), by = "Origen")
+
+ggplot(item_data, aes(x = dificultad, y = discriminacion)) +
+  geom_rect(aes(xmin = 0.3, xmax = 0.7, ymin = 0.3, ymax = 1), 
+            fill = "lightgreen", alpha = 0.3) +
+  geom_rect(aes(xmin = 0, xmax = 1, ymin = -0.5, ymax = 0), 
+            fill = "lightcoral", alpha = 0.3) +
+  geom_hline(yintercept = c(0, 0.2, 0.3), linetype = c("solid", "dashed", "dashed"), 
+             color = c("darkred", "orange", "darkgreen"), alpha = 0.7) +
+  geom_vline(xintercept = c(0.3, 0.7), linetype = "dashed", color = "gray50", alpha = 0.7) +
+  geom_point(color = "#003366", size = 2.5, alpha = 0.7) +
+  geom_text(aes(label = Origen), size = 2, vjust = -1, check_overlap = TRUE) +
+  scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.1)) +
+  scale_y_continuous(limits = c(min(-0.2, min(item_data$discriminacion, na.rm = TRUE) - 0.1), 
+                                max(0.8, max(item_data$discriminacion, na.rm = TRUE) + 0.1))) +
+  labs(
+    x = "Índice de Dificultad",
+    y = "Índice de Discriminación"
+  ) +
+  annotate("text", x = 0.5, y = 0.6, label = "Zona\nÓptima", color = "darkgreen", size = 3) +
+  theme_minimal() +
+  theme(
+    panel.grid.minor = element_blank()
+  )
+```
+
+## Ítems Problemáticos
+
+Los siguientes ítems presentan características que sugieren necesidad de revisión:
+
+```{r problematic-items}
+prob <- psych$problematic_items$problematic_items
+
+if (nrow(prob) > 0) {
+  prob %>%
+    select(Origen, dificultad, discriminacion, problemas) %>%
+    arrange(discriminacion) %>%
+    gt() %>%
+    cols_label(
+      Origen = "Ítem",
+      dificultad = "Dificultad",
+      discriminacion = "Discriminación",
+      problemas = "Problema Detectado"
+    ) %>%
+    fmt_number(columns = c(dificultad, discriminacion), decimals = 3) %>%
+    tab_options(table.width = pct(100)) %>%
+    as_latex() %>%
+    fix_gt_latex_accents()
+} else {
+  cat("No se detectaron ítems problemáticos. Todos los ítems cumplen con los criterios psicométricos mínimos.")
+}
+```
+
+```{r problematic-summary}
+if (nrow(prob) > 0) {
+  cat(sprintf("\n**Resumen:** %d de %d ítems (%.1f%%) requieren revisión.\n",
+              nrow(prob), n_items, 100 * nrow(prob) / n_items))
+}
+```
+
+## Comparación entre Formas
+
+```{r forms-comparison}
+forms <- psych$form_comparison
+
+if (forms$n_forms > 1) {
+  forms$form_stats %>%
+    gt() %>%
+    cols_label(
+      Forma = "Forma",
+      n_estudiantes = "N",
+      promedio = "Promedio (%)",
+      mediana = "Mediana (%)",
+      desv_std = "D.E.",
+      minimo = "Mín.",
+      maximo = "Máx."
+    ) %>%
+    fmt_number(columns = c(promedio, mediana, desv_std, minimo, maximo), decimals = 1) %>%
+    tab_options(table.width = pct(100)) %>%
+    as_latex() %>%
+    fix_gt_latex_accents()
+} else {
+  cat("Solo se utilizó una forma de la evaluación.")
+}
+```
+
+```{r forms-equivalence}
+if (forms$n_forms > 1) {
+  if (!is.na(forms$anova_p_value)) {
+    cat(sprintf("\n**Análisis de varianza (ANOVA):**\n\n"))
+    cat(sprintf("- Valor p: %.4f\n", forms$anova_p_value))
+    cat(sprintf("- Eta cuadrado (η²): %.3f\n", forms$eta_squared))
+    
+    if (forms$forms_equivalent) {
+      cat("\n**Conclusión:** No se encontraron diferencias estadísticamente significativas entre las formas (p > 0.05). Las formas pueden considerarse equivalentes.\n")
+    } else {
+      cat("\n**Conclusión:** Se encontraron diferencias estadísticamente significativas entre las formas (p ≤ 0.05). Se recomienda revisar el proceso de equiparación.\n")
+    }
+  }
+}
+```
+
+```{r forms-boxplot, fig.width=7, fig.height=3.5, eval=(forms$n_forms > 1)}
+#| fig-cap: "Comparación de puntajes por forma"
+
+if (forms$n_forms > 1) {
+  student_scores <- md$results %>%
+    group_by(Forma, student_id) %>%
+    summarise(
+      porcentaje = 100 * mean(is_correcta, na.rm = TRUE), 
+      .groups = "drop"
+    )
+  
+  ggplot(student_scores, aes(x = factor(Forma), y = porcentaje, fill = factor(Forma))) +
+    geom_boxplot(alpha = 0.7, show.legend = FALSE) +
+    geom_jitter(width = 0.2, alpha = 0.3, size = 1) +
+    scale_fill_brewer(palette = "Set2") +
+    labs(
+      x = "Forma",
+      y = "Puntaje (%)"
+    ) +
+    theme_minimal() +
+    theme(
+      panel.grid.minor = element_blank()
+    )
+}
+```
+
+## Resumen Ejecutivo
+
+```{r executive-summary}
+# Determinar estado general
+issues <- c()
+recommendations <- c()
+
+# Confiabilidad
+if (rel$kr20 < 0.7) {
+  issues <- c(issues, sprintf("Confiabilidad baja (KR-20 = %.2f)", rel$kr20))
+  recommendations <- c(recommendations, "Considerar aumentar el número de ítems o revisar la homogeneidad del constructo")
+}
+
+# Ítems problemáticos
+if (n_problematic > 0) {
+  issues <- c(issues, sprintf("%d ítems con problemas psicométricos", n_problematic))
+  recommendations <- c(recommendations, "Revisar y mejorar los ítems identificados como problemáticos")
+}
+
+# Formas no equivalentes
+if (forms$n_forms > 1 && !is.na(forms$anova_p_value) && !forms$forms_equivalent) {
+  issues <- c(issues, "Formas no equivalentes")
+  recommendations <- c(recommendations, "Revisar el proceso de construcción de formas paralelas")
+}
+
+# Dificultad extrema
+very_easy <- sum(dif$dificultad > 0.9)
+very_hard <- sum(dif$dificultad < 0.2)
+if (very_easy > n_items * 0.2) {
+  issues <- c(issues, sprintf("%.0f%% de ítems muy fáciles", 100*very_easy/n_items))
+  recommendations <- c(recommendations, "Aumentar la dificultad de ítems muy fáciles")
+}
+if (very_hard > n_items * 0.2) {
+  issues <- c(issues, sprintf("%.0f%% de ítems muy difíciles", 100*very_hard/n_items))
+  recommendations <- c(recommendations, "Revisar ítems muy difíciles para detectar problemas de formulación")
+}
+```
+
+### Indicadores Clave
+
+| Indicador | Valor | Estado |
+|-----------|-------|--------|
+| Confiabilidad (KR-20) | `r sprintf("%.3f", rel$kr20)` | `r ifelse(rel$kr20 >= 0.7, "✓ Aceptable", "⚠ Revisar")` |
+| Ítems analizados | `r n_items` | - |
+| Ítems problemáticos | `r n_problematic` (`r sprintf("%.1f%%", 100*n_problematic/n_items)`) | `r ifelse(n_problematic/n_items <= 0.1, "✓ Aceptable", "⚠ Revisar")` |
+| Dificultad promedio | `r sprintf("%.2f", mean(dif$dificultad))` | `r ifelse(mean(dif$dificultad) >= 0.4 && mean(dif$dificultad) <= 0.7, "✓ Óptimo", "⚠ Revisar")` |
+| Discriminación promedio | `r sprintf("%.2f", mean(disc$discriminacion, na.rm=TRUE))` | `r ifelse(mean(disc$discriminacion, na.rm=TRUE) >= 0.2, "✓ Aceptable", "⚠ Revisar")` |
+| Formas equivalentes | `r ifelse(forms$n_forms == 1, "N/A", ifelse(forms$forms_equivalent, "Sí", "No"))` | `r ifelse(forms$n_forms == 1, "-", ifelse(forms$forms_equivalent, "✓", "⚠"))` |
+
+```{r issues-recommendations}
+if (length(issues) > 0) {
+  cat("\n### Aspectos a Mejorar\n\n")
+  for (i in seq_along(issues)) {
+    cat(sprintf("%d. %s\n", i, issues[i]))
+  }
+  
+  cat("\n### Recomendaciones\n\n")
+  for (i in seq_along(recommendations)) {
+    cat(sprintf("%d. %s\n", i, recommendations[i]))
+  }
+} else {
+  cat("\n### Conclusión\n\n")
+  cat("El instrumento cumple con los estándares psicométricos básicos. No se detectaron problemas significativos que requieran atención inmediata.\n")
+}
+```
+
+---
+
+*Reporte generado automáticamente el `r format(Sys.time(), "%d de %B de %Y a las %H:%M")`*

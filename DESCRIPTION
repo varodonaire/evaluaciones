@@ -1,0 +1,32 @@
+Package: PruebasUDD
+Type: Package
+Title: Generación y Revisión de Pruebas Educativas
+Version: 0.2.0
+Authors@R: c(
+    person(
+      "Alvaro", "",
+      email = "varodonaire@users.noreply.github.com",
+      role = c("aut", "cre")
+    )
+  )
+Description: Paquete para generar múltiples versiones de exámenes usando el 
+    paquete 'exams' y procesar los resultados de los estudiantes. Permite crear
+    pruebas con preguntas aleatorizadas, exportar ítems en formato JSON, y 
+    calcular puntajes y estadísticas de rendimiento por estudiante y por tema.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports:
+    dplyr,
+    tidyr,
+    stringr,
+    readr,
+    jsonlite,
+    readxl,
+    writexl,
+    exams,
+    knitr
+Suggests:
+    quarto,
+    testthat (>= 3.0.0)
+RoxygenNote: 7.3.1
