@@ -1,0 +1,116 @@
+# ==============================================================================
+# R / RStudio
+# ==============================================================================
+
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+.RDataTmp
+
+# User-specific files
+.Ruserdata
+
+# RStudio files
+.Rproj.user/
+
+# R Environment Variables
+.Renviron
+
+# pkgdown site
+docs/
+
+# Compiled bytecode
+*.Rcheck/
+
+# Packrat
+packrat/lib*/
+packrat/src/
+
+# renv
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/python/
+renv/sandbox/
+renv/staging/
+renv/.lock
+
+# knitr and R Markdown
+*_cache/
+/cache/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Output files from R CMD build
+/*.tar.gz
+
+# Output files from R CMD check
+/*.Rcheck/
+
+# Vignettes build
+/vignettes/*.html
+/vignettes/*.pdf
+
+# ==============================================================================
+# macOS
+# ==============================================================================
+
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# ==============================================================================
+# Project specific
+# ==============================================================================
+
+# Generated exams
+examenes_generados/
+examenes/
+
+# Generated reports
+reportes/
+reportes_*/
+
+# Session cache files
+.__session_cache*.rds
+
+# JSON exports (keep examples)
+*.json
+!inst/**/*.json
+
+# Temporary test files
+test_output/
+temp/
+tmp/
+
+# Log files
+*.log

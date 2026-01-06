@@ -1,0 +1,308 @@
+---
+title: "Informe de Resultados - Docente"
+format:
+  pdf:
+    documentclass: article
+    number-sections: true
+    fig-width: 6
+    fig-height: 3
+    papersize: letter
+    mainfont: Libertinus Sans
+    mathfont: Libertinus Math
+    keep-tex: true
+    pdf-engine: xelatex
+    header-includes:
+      - \usepackage{amsmath}
+      - \usepackage{enumitem}
+      - \usepackage{siunitx}
+      - \sisetup{group-separator={.},group-minimum-digits={3},output-decimal-marker={,},group-digits=integer,per-mode=symbol,range-phrase = \text{--}}
+      - \usepackage{csquotes}
+      - \usepackage{longtable}
+      - \usepackage{booktabs}
+params:
+  session_id: "REPLACE_SESSION_ID"
+  data_file: ".__session_cache2.rds"
+execute:
+  echo: false
+  warning: false
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(gt)
+library(showtext)
+font_add(
+  family = "Libertinus Sans",
+  regular = "/Users/alvaro/Library/Fonts/LibertinusSans-Regular.otf"
+)
+showtext_auto()
+
+# Set locale to UTF-8
+Sys.setlocale("LC_ALL", "es_MX.UTF-8")
+
+fix_gt_latex_accents <- function(gt_tbl) {
+  x <- as.character(gt::as_latex(gt_tbl))
+  
+  # Corrige \\' por \'
+  x <- gsub(
+    "\\\\\\\\'([A-Za-zÁÉÍÓÚáéíóúÑñÜü])",
+    "\\\\'\\1",
+    x,
+    perl = TRUE
+  )
+  
+  # Corrige diéresis si se escaparon como \" (por seguridad)
+  x <- gsub(
+    "\\\\\\\\\"([A-Za-zÜü])",
+    "\\\\\"\\1",
+    x,
+    perl = TRUE
+  )
+  
+  # Devuelve el string limpio listo para cat()
+  x
+}
+
+# Load cached metadata
+md <- readRDS(params$data_file)
+param_session_id <- params$session_id
+
+# Get session info
+session <- md$sessions %>%
+  filter(session_id == param_session_id) %>%
+  slice(1)
+
+if (nrow(session) == 0) {
+  stop(sprintf("Session ID not found: %s", param_session_id))
+}
+
+session_name <- session$group_name
+# Date should already be a Date object from process_sessions_data
+session_date <- session$date
+
+# Get students in this session
+session_student_ids <- session$students[[1]]
+
+# Filter results for this session
+student_scores <- md$results_general %>%
+  filter(student_id %in% session_student_ids)
+
+# Join with student names
+student_scores <- student_scores %>%
+  left_join(md$students %>% select(student_id, name), by = "student_id") %>%
+  arrange(porcentaje) %>%  # Ascending order (worst first)
+  mutate(rank = row_number())
+
+# Calculate statistics
+n_students <- nrow(student_scores)
+mean_score <- mean(student_scores$porcentaje, na.rm = TRUE)
+median_score <- median(student_scores$porcentaje, na.rm = TRUE)
+sd_score <- sd(student_scores$porcentaje, na.rm = TRUE)
+min_score <- min(student_scores$porcentaje, na.rm = TRUE)
+max_score <- max(student_scores$porcentaje, na.rm = TRUE)
+
+# Question performance - filter to questions answered by this session
+session_results <- md$results %>%
+  filter(student_id %in% session_student_ids)
+
+question_performance <- session_results %>%
+  group_by(Origen) %>%
+  summarise(
+    n = n(),
+    correctas = sum(is_correcta, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(porcentaje = ifelse(n > 0, 100 * correctas / n, NA_real_))
+
+# Join with question details from forma 10
+forma_10 <- md$questions_extra
+
+question_performance <- question_performance %>%
+  left_join(forma_10 %>% select(Origen, Eje, Texto, Alternativas, Correcta), 
+            by = "Origen") %>%
+  arrange(porcentaje)  # Ascending order (most difficult first)
+
+# Performance by Eje
+eje_performance <- session_results %>%
+  group_by(Eje) %>%
+  summarise(
+    n = n(),
+    correctas = sum(is_correcta, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(porcentaje = ifelse(n > 0, 100 * correctas / n, NA_real_))
+
+# Join with eje names
+ejes <- md$ejes
+eje_performance <- eje_performance %>%
+  left_join(ejes, by = c("Eje" = "identificador")) %>%
+  arrange(porcentaje)
+
+```
+
+# Información de la Sesión
+
+**Grupo:** `r session_name`  
+**Fecha:** `r if(!is.na(session_date)) format(session_date, "%d/%m/%Y") else "N/A"`  
+**Número de estudiantes:** `r n_students`
+
+# Estadísticas Generales
+
+```{r stats_table, results='asis'}
+stats_df <- tibble(
+  Estadística = c("Media", "Mediana", "Desviación Estándar", "Mínimo", "Máximo"),
+  Valor = c(
+    sprintf("%.1f%%", mean_score),
+    sprintf("%.1f%%", median_score),
+    sprintf("%.1f%%", sd_score),
+    sprintf("%.1f%%", min_score),
+    sprintf("%.1f%%", max_score)
+  )
+)
+
+stats_gt <- stats_df %>%
+  gt() %>%
+  tab_options(
+    table.width = pct(60)
+  )
+
+cat(fix_gt_latex_accents(stats_gt))
+```
+
+# Resultados por Estudiante
+
+Los estudiantes están ordenados de menor a mayor rendimiento.
+
+```{r student_results, results='asis'}
+student_results_display <- student_scores %>%
+  select(Posición = rank, Nombre = name, `ID` = student_id, 
+         Correctas = correctas, Total = n, `Porcentaje (%)` = porcentaje)
+
+student_gt <- student_results_display %>%
+  gt() %>%
+  fmt_number(columns = `Porcentaje (%)`, decimals = 1) %>%
+  tab_options(
+    table.font.size = 9
+  )
+
+cat(fix_gt_latex_accents(student_gt))
+```
+
+\newpage
+
+# Desempeño por Eje Temático
+
+```{r eje_performance_table, results='asis'}
+eje_display <- eje_performance %>%
+  select(Unidad = nombre, `N° Respuestas` = n, Correctas = correctas, `Porcentaje (%)` = porcentaje) %>%
+  mutate(`Porcentaje (%)` = ifelse(is.na(`Porcentaje (%)`), 0, `Porcentaje (%)`))
+
+eje_gt <- eje_display %>%
+  gt() %>%
+  fmt_number(columns = `Porcentaje (%)`, decimals = 1) %>%
+  tab_options(
+    table.font.size = 10
+  )
+
+cat(fix_gt_latex_accents(eje_gt))
+```
+
+# Desempeño por Pregunta
+
+Las preguntas están ordenadas de menor a mayor tasa de éxito (las más difíciles primero).
+
+```{r question_performance_table, results='asis'}
+question_display <- question_performance %>%
+  select(ID = Origen, Eje, `N° Respuestas` = n, Correctas = correctas, `Porcentaje (%)` = porcentaje)
+
+question_gt <- question_display %>%
+  gt() %>%
+  fmt_number(columns = `Porcentaje (%)`, decimals = 1) %>%
+  tab_options(
+    table.font.size = 9
+  )
+
+cat(fix_gt_latex_accents(question_gt))
+```
+
+\newpage
+
+# Preguntas Completas (Ordenadas por Dificultad)
+
+```{r build_questions, include=FALSE}
+latex_questions <- NULL
+
+if (nrow(question_performance) > 0) {
+  # Simplified function - data is already properly formatted
+  fix_macros <- function(x) {
+    if (is.null(x)) return("")
+    x[is.na(x)] <- ""
+    
+    # Only handle potential data quality issues
+    # Collapse multiple spaces
+    x <- gsub("[ ]{2,}", " ", x, perl = TRUE)
+    
+    return(x)
+  }
+
+  latex_questions <- paste(capture.output({
+    cat("\\begin{enumerate}\n")
+    for (i in seq_len(nrow(question_performance))) {
+      # Question ID and success rate
+      q_id <- question_performance$Origen[i]
+      # Escape underscores for LaTeX
+      q_id <- gsub("_", "\\\\_", q_id)
+      q_rate <- sprintf("%.1f", question_performance$porcentaje[i])
+      q_eje <- question_performance$Eje[i]
+      # Escape underscores in Eje too
+      q_eje <- gsub("_", "\\\\_", q_eje)
+      
+      cat(sprintf("\\item \\textbf{Pregunta %s} (Eje: %s, Tasa de éxito: %s\\%%)\n\n", 
+                  q_id, q_eje, q_rate))
+      
+      # Enunciado
+      txt <- question_performance$Texto[i]
+      if (is.na(txt)) txt <- ""
+      txt <- fix_macros(txt)
+      cat("\\begin{minipage}[t]{\\linewidth}", txt, "\n", sep = "")
+
+      # Read alternatives from the list-column
+      alts <- question_performance$Alternativas[[i]]
+      if (is.null(alts)) alts <- character(0)
+      alts <- fix_macros(alts)
+      alts <- alts[!is.na(alts) & nzchar(alts)]
+
+      cat("    \\begin{enumerate}[label=\\alph*)]\n")
+      if (length(alts)) {
+        for (a in alts) cat("    \\item ", a, "\n", sep = "")
+      }
+      cat("    \\end{enumerate}\n")
+      
+      # Correct answer
+      correct <- question_performance$Correcta[i]
+      if (!is.na(correct) && nzchar(correct)) {
+        cat(sprintf("    \\textbf{Respuesta correcta:} %s\n", correct))
+      }
+      
+      cat("\\end{minipage}\n")
+      if (i < nrow(question_performance)) cat("\n")
+    }
+    cat("\n\\end{enumerate}\n")
+  }), collapse = "\n")
+
+} else {
+  latex_questions <- "No hay preguntas disponibles."
+}
+```
+
+```{r print_questions, results='asis'}
+cat(latex_questions)
+```
+
+# Archivos Exportados
+
+Los siguientes archivos han sido generados en el directorio de salida:
+
+- **Lista de estudiantes:** `students_session_`r param_session_id`.txt`
+- **Puntajes detallados:** Archivo Excel con puntajes individuales
+- **Rendimiento por pregunta:** Archivo Excel con estadísticas por pregunta

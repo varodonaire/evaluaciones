@@ -1,0 +1,238 @@
+---
+title: "Informe de aprendizajes"
+format:
+  pdf:
+    documentclass: article
+    number-sections: true
+    fig-width: 5
+    fig-height: 3
+    papersize: letter
+    mainfont: Libertinus Sans
+    mathfont: Libertinus Math
+    keep-tex: true
+    pdf-engine: xelatex
+    header-includes:
+      - \usepackage{amsmath}
+      - \usepackage{enumitem}
+      - \usepackage{siunitx}
+      - \sisetup{group-separator={.},group-minimum-digits={3},output-decimal-marker={,},group-digits=integer,per-mode=symbol,range-phrase = \text{--}}
+      - \usepackage{csquotes}
+params:
+  student_id: "REPLACE_STUDENT_ID"
+  session_id: "REPLACE_SESSION_ID"
+  data_file: ".__session_cache2.rds"
+execute:
+  echo: false
+  warning: false
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(gt)
+library(showtext)
+font_add(
+  family = "Libertinus Sans",
+  regular = "/Users/alvaro/Library/Fonts/LibertinusSans-Regular.otf"
+)
+showtext_auto()
+
+# Set locale to UTF-8
+Sys.setlocale("LC_ALL", "es_MX.UTF-8")
+
+fix_gt_latex_accents <- function(gt_tbl) {
+  x <- as.character(gt::as_latex(gt_tbl))
+  
+  # Corrige \\' por \'
+  x <- gsub(
+    "\\\\\\\\'([A-Za-zÁÉÍÓÚáéíóúÑñÜü])",
+    "\\\\'\\1",
+    x,
+    perl = TRUE
+  )
+  
+  # Corrige diéresis si se escaparon como \" (por seguridad)
+  x <- gsub(
+    "\\\\\\\\\"([A-Za-zÜü])",
+    "\\\\\"\\1",
+    x,
+    perl = TRUE
+  )
+  
+  # Devuelve el string limpio listo para cat()
+  x
+}
+
+#metadata <- list(results = res_joined, students = students, results_general = results_general, ejes = ejes, questions_extra= forma_10, sessions = sessions)
+
+md <- readRDS(params$data_file)
+param_session_id <- params$session_id
+sid <- params$student_id
+
+student_results <- md$results %>%
+  filter(student_id == sid) 
+
+student <- md$students %>%
+  filter(student_id == sid) %>%
+  slice(1)
+
+ejes <- md$ejes
+
+results_general <- md$results_general
+student_summary <- results_general %>%
+   filter(student_id == sid) %>%
+  slice(1)
+
+# Get session info
+session <- md$sessions %>%
+  filter(session_id == param_session_id) %>%
+  slice(1)
+
+# Extract questions that were answered incorrectly
+incorrectas <- student_results %>%
+  filter(!is_correcta) %>%
+  arrange(Pregunta)
+
+# Results for all students in the session (already filtered by Revisador_modern.R)
+# No need to extract from session - results_general already contains only session students
+resultados_seccion <- results_general %>%
+  arrange(desc(porcentaje))
+
+forma_10 <- md$questions_extra
+
+```
+
+## Resumen General
+
+**Alumno:** `r student$name`  
+**ID:** `r sid`  
+**Puntaje:** `r student_summary$correctas`/`r student_summary$n`  
+**Resultado:** \qty[drop-zero-decimal]{`r sprintf('%.1f', student_summary$porcentaje)`}{\percent} de logro en la evaluación.
+
+
+## Desempeño por eje
+```{r eje_summary, results='asis'}
+#student_results
+eje_summary <- student_results %>%
+ group_by(Eje) %>%
+ summarise(correctas = sum(is_correcta), total = n(), porcentaje = 100*correctas/total, .groups = "drop") %>%
+ arrange(Eje) %>%
+ mutate(
+ Categoria = case_when(
+   porcentaje < 50 ~ "Bajo",
+   porcentaje <= 75 ~ "Mejorable",
+   TRUE ~ "Bueno"
+ )
+)
+eje_summary <- eje_summary %>%
+ left_join(ejes, by = c("Eje" = "identificador"))
+lowest_two <- eje_summary %>% arrange(porcentaje) %>% slice_head(n=2) %>% pull(nombre)
+lowest_eje <- lowest_two[1]
+second_lowest_eje <- lowest_two[2]
+
+eje_gt <- eje_summary %>%
+ select(Unidad = nombre, `Porcentaje (%)` = porcentaje, Categoria) %>%
+ gt() %>%
+ fmt_number(columns = `Porcentaje (%)`, decimals = 1)
+cat(fix_gt_latex_accents(eje_gt))
+```
+
+Tus dos ejes con menor desempeño fueron **`r lowest_eje`** y **`r second_lowest_eje`**.
+
+```{r ejes-grafico}
+#| fig-width: 6
+#| fig-height: 1.5
+ggplot(eje_summary, aes(x=reorder(nombre, porcentaje), y=porcentaje, fill=Categoria)) +
+ geom_col(width = 0.5) +
+ coord_flip() +
+  geom_hline(yintercept = 50, linetype = "dotted", color = "dimgray") +
+ scale_y_continuous(limits = c(0,100), breaks=seq(0,100,10)) +
+ scale_fill_manual(
+   values = c("Bajo" = "lightsalmon", "Mejorable" = "dodgerblue", "Bueno" = "springgreen3"),
+   drop = FALSE
+ ) +
+ labs(y="Porcentaje (%)") +
+ theme_minimal(base_family = "Libertinus Sans") +
+ theme(legend.position = "none") +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.title = element_blank())+
+  theme(text = element_text(family = "Libertinus Sans")) +
+  theme(text = element_text(size=10))+
+  theme(axis.title.x = element_text(size=7))+
+  theme(plot.title = element_text(size=10))
+```
+
+## Resumen curso
+```{r, fig.height=1.18, fig.width=6}
+# student_ids
+# resultados_seccion
+resultados_seccion %>%
+  ggplot(aes(x = porcentaje, y = 0)) +
+  geom_point(size = 4, color = "darkgreen", alpha = 0.5) +
+  geom_vline(xintercept = 50, linetype = "dotted", color = "dimgray") +
+  geom_point(data = subset(resultados_seccion, student_id == sid), aes(x = porcentaje, y = 0), size = 6, color = "coral") +
+  xlab("Respuestas correctas (%)") +
+  scale_x_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 10),
+    labels = scales::label_percent(scale = 1, accuracy = 1)
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_blank(),
+    axis.text.y  = element_blank(),
+    axis.ticks.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
+```
+
+## Preguntas incorrectas
+
+```{r build_incorrectas, include=FALSE}
+latex_incorrectas <- NULL
+if (nrow(incorrectas) > 0) {
+
+  # Simplified function - data is already properly formatted
+  fix_macros <- function(x) {
+    if (is.null(x)) return("")
+    x[is.na(x)] <- ""
+    
+    # Only handle potential data quality issues
+    # Collapse multiple spaces
+    x <- gsub("[ ]{2,}", " ", x, perl = TRUE)
+    
+    return(x)
+  }
+
+  latex_incorrectas <- paste(capture.output({
+    cat("\\begin{itemize}\n")
+    for (i in seq_len(nrow(incorrectas))) {
+      # Enunciado
+      txt <- incorrectas$Texto[i]; if (is.na(txt)) txt <- ""
+      txt <- fix_macros(txt)
+      cat("\\item \\begin{minipage}[t]{\\linewidth}", txt, "\n", sep = "")
+
+      # ----- leer alternativas desde la list-column -----
+      alts <- incorrectas$Alternativas[[i]]
+      if (is.null(alts)) alts <- character(0)
+      alts <- fix_macros(alts)
+      alts <- alts[!is.na(alts) & nzchar(alts)]
+
+      cat("    \\begin{enumerate}[label=\\alph*)]\n")
+      if (length(alts)) {
+        for (a in alts) cat("    \\item ", a, "\n", sep = "")
+      }
+      cat("    \\end{enumerate}\n\\end{minipage}")
+      if (i < nrow(incorrectas)) cat("\n")
+    }
+    cat("\n\\end{itemize}\n")
+  }), collapse = "\n")
+
+} else {
+  latex_incorrectas <- "Todas correctas."
+}
+```
+
+```{r print_incorrectas, results='asis'}
+cat(latex_incorrectas)
+```
