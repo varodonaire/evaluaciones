@@ -13,6 +13,15 @@
 #   Check Package:             'Cmd + Shift + E'
 #   Test Package:              'Cmd + Shift + T'
 
+#' Hello, World!
+#'
+#' Example function that prints "Hello, world!".
+#'
+#' @return Invisible NULL
+#' @export
+#'
+#' @examples
+#' hello()
 hello <- function() {
   print("Hello, world!")
 }

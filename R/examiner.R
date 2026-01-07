@@ -1,30 +1,37 @@
 # ==============================================================================
-# EXAMINER: Generación y Revisión de Pruebas
+# EXAMINER: Generacion y Revision de Pruebas
 # ==============================================================================
-# Un paquete flexible para generar múltiples versiones de exámenes y
+# Un paquete flexible para generar multiples versiones de examenes y
 # procesar los resultados de los estudiantes.
 # ==============================================================================
 
-#' @import tidyverse
-#' @import exams
-#' @import jsonlite
-#' @import readxl
-#' @import writexl
-#' @importFrom knitr knit
+#' @importFrom dplyr %>% across all_of any_of arrange bind_rows case_when
+#' @importFrom dplyr desc distinct filter first group_by inner_join left_join
+#' @importFrom dplyr mutate n n_distinct rename select slice summarise sym ungroup
+#' @importFrom tidyr pivot_longer pivot_wider unite
+#' @importFrom stringr str_remove
+#' @importFrom tibble tibble
+#' @importFrom readr locale
+#' @importFrom jsonlite write_json
+#' @importFrom writexl write_xlsx
+#' @importFrom exams exams2pdf
+#' @importFrom stats aov cor median quantile sd setNames var
+#' @importFrom utils write.csv
+#' @importFrom tidyselect matches where
 NULL
 
 # ==============================================================================
-# CLASE S3: ExamConfig - Configuración de Examen
+# CLASE S3: ExamConfig - Configuracion de Examen
 # ==============================================================================
 
-#' Crear configuración de examen
+#' Crear configuracion de examen
 #'
 #' @param name Nombre identificador del examen (ej: "algebra_b4_p1")
-#' @param year Año de la evaluación
-#' @param period Período/bimestre (ej: 1, 2, 3, 4 o "semestre1")
-#' @param subject Asignatura (ej: "Matemáticas", "Física")
-#' @param num_forms Número de formas/versiones del examen (default: 10)
-#' @param groups Lista con configuración de grupos: list(sizes = c(4,4,2), seeds = c(13,17,57))
+#' @param year Anio de la evaluacion
+#' @param period Periodo/bimestre (ej: 1, 2, 3, 4 o "semestre1")
+#' @param subject Asignatura (ej: "Matematicas", "Fisica")
+#' @param num_forms Numero de formas/versiones del examen (default: 10)
+#' @param groups Lista con configuracion de grupos: list(sizes = c(4,4,2), seeds = c(13,17,57))
 #' @param template Ruta al archivo template LaTeX (opcional)
 #' @param output_dir Directorio de salida para PDFs
 #' @param tex_engine Motor LaTeX a usar ("xelatex", "pdflatex", etc.)
@@ -85,19 +92,25 @@ create_exam_config <- function(name,
   return(config)
 }
 
+#' Print method for exam_config objects
+#'
+#' @param x An exam_config object
+#' @param ... Additional arguments (ignored)
+#'
+#' @return Invisibly returns the input object
 #' @export
 print.exam_config <- function(x, ...) {
-  cat("═══════════════════════════════════════════════════════\n")
-  cat("CONFIGURACIÓN DE EXAMEN\n")
-  cat("═══════════════════════════════════════════════════════\n")
+  cat(strrep("=", 55), "\n", sep = "")
+  cat("CONFIGURACION DE EXAMEN\n")
+  cat(strrep("=", 55), "\n", sep = "")
   cat(sprintf("  Nombre:      %s\n", x$name))
   cat(sprintf("  Asignatura:  %s\n", x$subject))
-  cat(sprintf("  Año:         %d\n", x$year))
-  cat(sprintf("  Período:     %s\n", x$period))
+  cat(sprintf("  Anio:        %d\n", x$year))
+  cat(sprintf("  Periodo:     %s\n", x$period))
   cat(sprintf("  Formas:      %d (%s)\n", x$num_forms, paste(x$form_labels, collapse = ", ")))
   cat(sprintf("  Grupos:      %d\n", length(x$groups$sizes)))
   cat(sprintf("  Output:      %s\n", x$output_dir))
-  cat("═══════════════════════════════════════════════════════\n")
+  cat(strrep("=", 55), "\n", sep = "")
   invisible(x)
 }
 
@@ -109,19 +122,19 @@ print.exam_config <- function(x, ...) {
 #'
 #' @param questions Vector de nombres de archivos .Rnw o data.frame con columnas 'file' y 'topic'
 #' @param topics Vector de temas/ejes correspondientes a cada pregunta (si questions es vector)
-#' @param base_dir Directorio base donde están los archivos .Rnw
+#' @param base_dir Directorio base donde estan los archivos .Rnw
 #'
 #' @return Objeto de clase "question_pool"
 #' @export
 #'
 #' @examples
-#' # Opción 1: Vectores separados
+#' # Opcion 1: Vectores separados
 #' pool <- create_question_pool(
 #'   questions = c("ProgArit_1.Rnw", "ProgArit_2.Rnw", "Sumatoria_1.Rnw"),
 #'   topics = c("Progresiones", "Progresiones", "Sumatorias")
 #' )
 #'
-#' # Opción 2: Data frame
+#' # Opcion 2: Data frame
 #' pool <- create_question_pool(
 #'   questions = data.frame(
 #'     file = c("ProgArit_1.Rnw", "Sumatoria_1.Rnw"),
@@ -141,18 +154,18 @@ if (is.data.frame(questions)) {
   } else {
     files <- questions
     if (is.null(topics)) {
-      # Intentar inferir tópicos del nombre del archivo
+      # Intentar inferir topicos del nombre del archivo
       topics <- gsub("_\\d+\\.Rnw$", "", basename(files))
-      message("Tópicos inferidos de nombres de archivo: ", paste(unique(topics), collapse = ", "))
+      message("Topicos inferidos de nombres de archivo: ", paste(unique(topics), collapse = ", "))
     }
   }
   
   if (length(files) != length(topics)) {
-    stop("El número de preguntas debe coincidir con el número de tópicos")
+    stop("El numero de preguntas debe coincidir con el numero de topicos")
   }
   
-  # Crear lookup de archivo a tópico
-  # Usar nombre sin extensión como clave
+  # Crear lookup de archivo a topico
+  # Usar nombre sin extension como clave
   names_clean <- gsub("\\.Rnw$", "", basename(files))
   topic_lookup <- setNames(topics, names_clean)
   
@@ -174,7 +187,7 @@ if (is.data.frame(questions)) {
 #' @param pool Objeto question_pool
 #' @param stop_on_missing Si TRUE, detiene con error si faltan archivos
 #'
-#' @return Vector lógico indicando qué archivos existen
+#' @return Vector logico indicando que archivos existen
 #' @export
 validate_question_pool <- function(pool, stop_on_missing = TRUE) {
   full_paths <- file.path(pool$base_dir, pool$files)
@@ -191,39 +204,45 @@ validate_question_pool <- function(pool, stop_on_missing = TRUE) {
       warning(msg)
     }
   } else {
-    message(sprintf("✓ Todos los %d archivos de preguntas encontrados", pool$n_questions))
+    message(sprintf("[OK] Todos los %d archivos de preguntas encontrados", pool$n_questions))
   }
   
   invisible(exists)
 }
 
+#' Print method for question_pool objects
+#'
+#' @param x A question_pool object
+#' @param ... Additional arguments (ignored)
+#'
+#' @return Invisibly returns the input object
 #' @export
 print.question_pool <- function(x, ...) {
-  cat("═══════════════════════════════════════════════════════\n")
+  cat(strrep("=", 55), "\n", sep = "")
   cat("POOL DE PREGUNTAS\n")
-  cat("═══════════════════════════════════════════════════════\n")
+  cat(strrep("=", 55), "\n", sep = "")
   cat(sprintf("  Total preguntas: %d\n", x$n_questions))
   cat(sprintf("  Directorio:      %s\n", x$base_dir))
-  cat(sprintf("  Tópicos (%d):\n", length(x$unique_topics)))
+  cat(sprintf("  Topicos (%d):\n", length(x$unique_topics)))
   
-  # Contar preguntas por tópico
+  # Contar preguntas por topico
   topic_counts <- table(x$topics)
   for (topic in names(topic_counts)) {
     cat(sprintf("    - %s: %d preguntas\n", topic, topic_counts[topic]))
   }
-  cat("═══════════════════════════════════════════════════════\n")
+  cat(strrep("=", 55), "\n", sep = "")
   invisible(x)
 }
 
 # ==============================================================================
-# GENERACIÓN DE EXÁMENES
+# GENERACION DE EXAMENES
 # ==============================================================================
 
-#' Generar matrices de seeds y orden para exámenes
+#' Generar matrices de seeds y orden para examenes
 #'
 #' @param config Objeto exam_config
 #' @param pool Objeto question_pool
-#' @param order_seed Seed para la aleatorización del orden
+#' @param order_seed Seed para la aleatorizacion del orden
 #'
 #' @return Lista con seed_matrix y order_matrix
 #' @keywords internal
@@ -238,7 +257,7 @@ generate_exam_matrices <- function(config, pool, order_seed = 1234) {
     group_seeds[[i]] <- sample(1:100, num_questions, replace = TRUE)
   }
   
-  # Matriz de seeds (expandir por tamaño de grupo)
+  # Matriz de seeds (expandir por tamanio de grupo)
   seed_matrix <- NULL
   for (i in seq_along(config$groups$sizes)) {
     group_matrix <- matrix(
@@ -249,7 +268,7 @@ generate_exam_matrices <- function(config, pool, order_seed = 1234) {
     seed_matrix <- rbind(seed_matrix, group_matrix)
   }
   
-  # Matriz de orden (qué pregunta va en qué posición)
+  # Matriz de orden (que pregunta va en que posicion)
   order_matrix <- matrix(0, nrow = num_forms, ncol = num_questions)
   set.seed(order_seed)
   for (i in 1:num_forms) {
@@ -269,19 +288,19 @@ generate_exam_matrices <- function(config, pool, order_seed = 1234) {
   )
 }
 
-#' Generar exámenes PDF
+#' Generar examenes PDF
 #'
 #' @param config Objeto exam_config
 #' @param pool Objeto question_pool
-#' @param order_seed Seed para aleatorización del orden de preguntas
+#' @param order_seed Seed para aleatorizacion del orden de preguntas
 #' @param verbose Mostrar progreso detallado
 #'
-#' @return Objeto exam_result con los resultados de la generación
+#' @return Objeto exam_result con los resultados de la generacion
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' config <- create_exam_config("algebra", 2025, 4, "Matemáticas")
+#' config <- create_exam_config("algebra", 2025, 4, "Matematicas")
 #' pool <- create_question_pool(c("P1.Rnw", "P2.Rnw"), c("Tema1", "Tema2"))
 #' result <- generate_exams(config, pool)
 #' }
@@ -306,7 +325,7 @@ generate_exams <- function(config, pool, order_seed = 1234, verbose = TRUE) {
     setwd(pool$base_dir)
   }
   
-  # Generar exámenes
+  # Generar examenes
   tryCatch({
     exams_result <- exams2pdf(
       matrices$question_matrix,
@@ -335,7 +354,7 @@ generate_exams <- function(config, pool, order_seed = 1234, verbose = TRUE) {
     class(result) <- c("exam_result", "list")
     
     if (verbose) {
-      message("\n✓ Exámenes generados exitosamente")
+      message("\n[OK] Examenes generados exitosamente")
       message(sprintf("  Formas creadas: %d", config$num_forms))
       message(sprintf("  Directorio: %s", config$output_dir))
     }
@@ -344,20 +363,20 @@ generate_exams <- function(config, pool, order_seed = 1234, verbose = TRUE) {
     
   }, error = function(e) {
     setwd(old_wd)
-    stop(sprintf("Error generando exámenes: %s", e$message))
+    stop(sprintf("Error generando examenes: %s", e$message))
   })
 }
 
 # ==============================================================================
-# EXPORTACIÓN DE ÍTEMS (JSON)
+# EXPORTACION DE ITEMS (JSON)
 # ==============================================================================
 
-#' Convertir resultados de exams a formato de ítems JSON
+#' Convertir resultados de exams a formato de items JSON
 #'
 #' @param exam_result Objeto exam_result de generate_exams()
 #' @param output_file Ruta del archivo JSON de salida (opcional)
 #'
-#' @return Lista de ítems en formato estructurado
+#' @return Lista de items en formato estructurado
 #' @export
 export_items_json <- function(exam_result, output_file = NULL) {
   
@@ -373,7 +392,7 @@ export_items_json <- function(exam_result, output_file = NULL) {
   items <- lapply(seq_along(results), function(i_exam) {
     exam <- results[[i_exam]]
     
-    # Número de forma
+    # Numero de forma
     forma <- suppressWarnings(as.integer(gsub("\\D", "", exam_names[i_exam])))
     if (is.na(forma)) forma <- i_exam
     
@@ -417,7 +436,7 @@ export_items_json <- function(exam_result, output_file = NULL) {
         Forma = forma,
         Pregunta = i_q,
         Bimestre = config$period,
-        Año = config$year,
+        Anio = config$year,
         Prueba = config$name
       )
     })
@@ -429,26 +448,26 @@ export_items_json <- function(exam_result, output_file = NULL) {
   # Exportar si se especifica archivo
   if (!is.null(output_file)) {
     write_json(items_flat, output_file, auto_unbox = TRUE, pretty = TRUE)
-    message(sprintf("✓ Ítems exportados a %s (%d ítems)", output_file, length(items_flat)))
+    message(sprintf("[OK] Items exportados a %s (%d items)", output_file, length(items_flat)))
   }
   
   invisible(items_flat)
 }
 
 # ==============================================================================
-# CLASE S3: ProcessingConfig - Configuración de Procesamiento
+# CLASE S3: ProcessingConfig - Configuracion de Procesamiento
 # ==============================================================================
 
-#' Crear configuración para procesamiento de resultados
+#' Crear configuracion para procesamiento de resultados
 #'
 #' @param results_file Ruta al archivo Excel con respuestas de estudiantes
-#' @param items_file Ruta al archivo JSON con ítems/claves (generado por export_items_json)
+#' @param items_file Ruta al archivo JSON con items/claves (generado por export_items_json)
 #' @param students_file Ruta al archivo CSV con datos de estudiantes
 #' @param sessions_file Ruta al archivo JSON con sesiones (opcional)
-#' @param session_id ID de la sesión a procesar (opcional, si no se usa sessions_file)
-#' @param num_questions Número de preguntas en la prueba
+#' @param session_id ID de la sesion a procesar (opcional, si no se usa sessions_file)
+#' @param num_questions Numero de preguntas en la prueba
 #' @param output_dir Directorio para archivos de salida
-#' @param form_mapping Mapeo de letras a números para formas
+#' @param form_mapping Mapeo de letras a numeros para formas
 #' @param generate_reports Generar reportes PDF (requiere Quarto)
 #'
 #' @return Objeto de clase "processing_config"
@@ -486,20 +505,26 @@ create_processing_config <- function(results_file,
   return(config)
 }
 
+#' Print method for processing_config objects
+#'
+#' @param x A processing_config object
+#' @param ... Additional arguments (ignored)
+#'
+#' @return Invisibly returns the input object
 #' @export
 print.processing_config <- function(x, ...) {
-  cat("═══════════════════════════════════════════════════════\n")
-  cat("CONFIGURACIÓN DE PROCESAMIENTO\n")
-  cat("═══════════════════════════════════════════════════════\n")
+  cat(strrep("=", 55), "\n", sep = "")
+  cat("CONFIGURACION DE PROCESAMIENTO\n")
+  cat(strrep("=", 55), "\n", sep = "")
   cat(sprintf("  Resultados:  %s\n", x$files$results))
-  cat(sprintf("  Ítems:       %s\n", x$files$items))
+  cat(sprintf("  Items:       %s\n", x$files$items))
   cat(sprintf("  Estudiantes: %s\n", x$files$students))
   cat(sprintf("  Sesiones:    %s\n", ifelse(is.null(x$files$sessions), "(no)", x$files$sessions)))
   cat(sprintf("  Session ID:  %s\n", ifelse(is.null(x$session_id), "(todas)", x$session_id)))
   cat(sprintf("  Preguntas:   %d\n", x$num_questions))
   cat(sprintf("  Output:      %s\n", x$output_dir))
-  cat(sprintf("  Reportes:    %s\n", ifelse(x$generate_reports, "Sí", "No")))
-  cat("═══════════════════════════════════════════════════════\n")
+  cat(sprintf("  Reportes:    %s\n", ifelse(x$generate_reports, "Si", "No")))
+  cat(strrep("=", 55), "\n", sep = "")
   invisible(x)
 }
 
@@ -551,7 +576,7 @@ load_processing_data <- function(config) {
     data$sessions <- process_sessions_data(sessions_raw)
   }
   
-  message(sprintf("✓ Datos cargados: %d respuestas, %d ítems, %d estudiantes",
+  message(sprintf("[OK] Datos cargados: %d respuestas, %d items, %d estudiantes",
                   nrow(data$results), length(data$items), nrow(data$students)))
   
   return(data)
@@ -593,7 +618,12 @@ process_sessions_data <- function(sessions_data) {
   bind_rows(sessions_list)
 }
 
-#' Obtener estudiantes de una sesión específica
+#' Obtener estudiantes de una sesion especifica
+#'
+#' @param sessions Data frame con informacion de sesiones
+#' @param session_id ID de la sesion a buscar
+#'
+#' @return Vector con IDs de estudiantes de la sesion
 #' @export
 get_session_students <- function(sessions, session_id) {
   session <- sessions %>%
@@ -601,14 +631,14 @@ get_session_students <- function(sessions, session_id) {
     slice(1)
   
   if (nrow(session) == 0) {
-    stop(sprintf("Sesión no encontrada: %s", session_id))
+    stop(sprintf("Sesion no encontrada: %s", session_id))
   }
   
   session$students[[1]]
 }
 
 # ==============================================================================
-# TRANSFORMACIÓN DE DATOS DE RESULTADOS
+# TRANSFORMACION DE DATOS DE RESULTADOS
 # ==============================================================================
 
 #' Normalizar columnas de RUT chileno
@@ -641,7 +671,7 @@ normalize_rut_columns <- function(df) {
 #' @keywords internal
 standardize_response_columns <- function(df, num_questions) {
   
-  # Eliminar columnas completamente vacías
+  # Eliminar columnas completamente vacias
   df <- df %>%
     select(where(~ !all(is.na(.))))
   
@@ -655,7 +685,7 @@ standardize_response_columns <- function(df, num_questions) {
   resp_cols <- grep("^Resp|^respuesta", colnames(df), value = TRUE, ignore.case = TRUE)
   
   if (length(resp_cols) > 0) {
-    # Renombrar a formato estándar Respuestas-1, Respuestas-2, etc.
+    # Renombrar a formato estandar Respuestas-1, Respuestas-2, etc.
     new_names <- paste0("Respuestas-", seq_along(resp_cols))
     names(df)[match(resp_cols, names(df))] <- new_names
   }
@@ -663,7 +693,7 @@ standardize_response_columns <- function(df, num_questions) {
   df
 }
 
-#' Convertir formas de letras a números
+#' Convertir formas de letras a numeros
 #' @keywords internal
 convert_form_codes <- function(df, form_mapping) {
   df %>%
@@ -688,13 +718,13 @@ pivot_responses_long <- function(df) {
 }
 
 # ==============================================================================
-# SCORING Y ANÁLISIS
+# SCORING Y ANALISIS
 # ==============================================================================
 
 #' Unir respuestas con claves y calcular correctas
 #'
 #' @param responses_long Data frame de respuestas en formato largo
-#' @param items Lista o data frame de ítems con claves
+#' @param items Lista o data frame de items con claves
 #'
 #' @return Data frame con columna is_correct
 #' @export
@@ -729,7 +759,7 @@ score_responses <- function(responses_long, items) {
 #' Calcular puntajes por estudiante
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param id_col Nombre de la columna de identificación (default: "Rut")
+#' @param id_col Nombre de la columna de identificacion (default: "Rut")
 #'
 #' @return Data frame con puntajes por estudiante
 #' @export
@@ -748,7 +778,7 @@ calculate_student_scores <- function(scored_data, id_col = "Rut") {
 #' Calcular rendimiento por pregunta/eje
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param by Variable de agrupación ("Origen" o "Eje")
+#' @param by Variable de agrupacion ("Origen" o "Eje")
 #'
 #' @return Data frame con rendimiento por grupo
 #' @export
@@ -768,7 +798,7 @@ calculate_item_performance <- function(scored_data, by = "Origen") {
 # PIPELINE PRINCIPAL DE PROCESAMIENTO
 # ==============================================================================
 
-#' Procesar resultados de evaluación
+#' Procesar resultados de evaluacion
 #'
 #' @param config Objeto processing_config
 #'
@@ -787,9 +817,9 @@ calculate_item_performance <- function(scored_data, by = "Origen") {
 #' }
 process_assessment <- function(config) {
   
-  message("\n", strrep("═", 60))
-  message("PROCESAMIENTO DE EVALUACIÓN")
-  message(strrep("═", 60), "\n")
+  message("\n", strrep("=", 60))
+  message("PROCESAMIENTO DE EVALUACION")
+  message(strrep("=", 60), "\n")
   
   # 1. Cargar datos
   data <- load_processing_data(config)
@@ -809,18 +839,18 @@ process_assessment <- function(config) {
   # 4. Pivotar a formato largo
   results_long <- pivot_responses_long(clean_results)
   
-  # 5. Filtrar por sesión si se especifica
+  # 5. Filtrar por sesion si se especifica
   if (!is.null(config$session_id) && !is.null(data$sessions)) {
     session_students <- get_session_students(data$sessions, config$session_id)
     results_long <- results_long %>%
       filter(Rut %in% session_students)
-    message(sprintf("✓ Filtrado a sesión: %d estudiantes", length(session_students)))
+    message(sprintf("[OK] Filtrado a sesion: %d estudiantes", length(session_students)))
   }
   
   # 6. Calificar respuestas
   scored <- score_responses(results_long, data$items)
   
-  # 7. Calcular métricas
+  # 7. Calcular metricas
   student_scores <- calculate_student_scores(scored)
   item_performance <- calculate_item_performance(scored, "Origen")
   topic_performance <- calculate_item_performance(scored, "Eje")
@@ -839,16 +869,16 @@ process_assessment <- function(config) {
   write_xlsx(item_performance, items_file)
   write_xlsx(topic_performance, topics_file)
   
-  message(sprintf("✓ Archivos exportados a %s", config$output_dir))
+  message(sprintf("[OK] Archivos exportados a %s", config$output_dir))
   
   # 10. Resumen
-  message("\n", strrep("═", 60))
-  message("✓ PROCESAMIENTO COMPLETO")
-  message(strrep("═", 60))
+  message("\n", strrep("=", 60))
+  message("[OK] PROCESAMIENTO COMPLETO")
+  message(strrep("=", 60))
   message(sprintf("  Estudiantes: %d", nrow(student_scores)))
   message(sprintf("  Respuestas:  %d", nrow(scored)))
   message(sprintf("  Promedio:    %.1f%%", mean(student_scores$porcentaje, na.rm = TRUE)))
-  message(strrep("═", 60), "\n")
+  message(strrep("=", 60), "\n")
   
   # Retornar resultados
   invisible(list(
@@ -864,11 +894,11 @@ process_assessment <- function(config) {
 # FUNCIONES DE CONVENIENCIA
 # ==============================================================================
 
-#' Crear pool de preguntas desde patrón de nombres
+#' Crear pool de preguntas desde patron de nombres
 #'
 #' @param patterns Lista nombrada con patrones: list(Tema1 = "Patron1_", Tema2 = "Patron2_")
-#' @param nums Rango de números para cada patrón (default: 1:5)
-#' @param extension Extensión de archivo (default: ".Rnw")
+#' @param nums Rango de numeros para cada patron (default: 1:5)
+#' @param extension Extension de archivo (default: ".Rnw")
 #'
 #' @return Objeto question_pool
 #' @export
@@ -922,13 +952,13 @@ list_sessions <- function(sessions_file) {
 }
 
 # ==============================================================================
-# GENERACIÓN DE REPORTES
+# GENERACION DE REPORTES
 # ==============================================================================
 
 #' Obtener ruta al template incluido en el paquete
 #' @keywords internal
 get_template_path <- function(template_name) {
- # Buscar en inst/templates si está instalado, o en el directorio actual
+ # Buscar en inst/templates si esta instalado, o en el directorio actual
  pkg_path <- system.file("templates", template_name, package = "PruebasUDD")
  
  if (pkg_path == "") {
@@ -945,22 +975,22 @@ get_template_path <- function(template_name) {
 
 #' Preparar metadatos en formato compatible con templates
 #'
-#' Esta función prepara los datos en el formato exacto que esperan los templates
+#' Esta funcion prepara los datos en el formato exacto que esperan los templates
 #' Reporte.qmd y ReporteDocente.qmd, que incluye:
 #' - results: respuestas calificadas con is_correcta
-#' - students: información de estudiantes
+#' - students: informacion de estudiantes
 #' - results_general: puntajes por estudiante
-#' - ejes: definición de ejes temáticos
+#' - ejes: definicion de ejes tematicos
 #' - questions_extra: preguntas de una forma de referencia
-#' - sessions: información de sesiones
+#' - sessions: informacion de sesiones
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param students_df Data frame con información de estudiantes
-#' @param items_df Data frame con ítems/preguntas
-#' @param ejes_df Data frame con definición de ejes (identificador, nombre)
+#' @param students_df Data frame con informacion de estudiantes
+#' @param items_df Data frame con items/preguntas
+#' @param ejes_df Data frame con definicion de ejes (identificador, nombre)
 #' @param sessions_df Data frame con sesiones (opcional)
-#' @param reference_form Forma de referencia para questions_extra (default: última forma)
-#' @param id_col Columna de identificación de estudiantes
+#' @param reference_form Forma de referencia para questions_extra (default: ultima forma)
+#' @param id_col Columna de identificacion de estudiantes
 #'
 #' @return Lista con estructura compatible con templates
 #' @export
@@ -1058,18 +1088,18 @@ prepare_report_metadata <- function(scored_data,
 #' @export
 save_report_metadata <- function(metadata, file = ".__session_cache.rds") {
   saveRDS(metadata, file)
-  message(sprintf("✓ Metadatos guardados en: %s", file))
+  message(sprintf("[OK] Metadatos guardados en: %s", file))
   invisible(file)
 }
 
 #' Generar reporte individual de estudiante
 #'
 #' @param student_id ID del estudiante
-#' @param session_id ID de la sesión
+#' @param session_id ID de la sesion
 #' @param metadata Lista de metadatos (de prepare_report_metadata) o ruta a archivo .rds
 #' @param output_dir Directorio de salida para el PDF
 #' @param template Ruta al template Quarto (usa Reporte.qmd por defecto)
-#' @param working_dir Directorio de trabajo para Quarto (donde están las fuentes)
+#' @param working_dir Directorio de trabajo para Quarto (donde estan las fuentes)
 #'
 #' @return Lista con status y ruta del archivo generado
 #' @export
@@ -1154,23 +1184,23 @@ generate_student_report <- function(student_id,
   result <- list(
     student_id = student_id,
     status = if (file_exists) "success" else "failed",
-    message = if (file_exists) "Reporte generado exitosamente" else sprintf("Error al generar reporte (código: %d)", status),
+    message = if (file_exists) "Reporte generado exitosamente" else sprintf("Error al generar reporte (codigo: %d)", status),
     output_file = if (file_exists) output_file else NA_character_
   )
   
   if (file_exists) {
-    message(sprintf("✓ Reporte generado: %s", basename(output_file)))
+    message(sprintf("[OK] Reporte generado: %s", basename(output_file)))
   } else {
-    warning(sprintf("✗ Error generando reporte para %s", student_id))
+    warning(sprintf("[X] Error generando reporte para %s", student_id))
   }
   
   return(result)
 }
 
-#' Generar reportes para múltiples estudiantes
+#' Generar reportes para multiples estudiantes
 #'
 #' @param student_ids Vector de IDs de estudiantes
-#' @param session_id ID de la sesión
+#' @param session_id ID de la sesion
 #' @param metadata Lista de metadatos o ruta a archivo .rds
 #' @param output_dir Directorio de salida
 #' @param template Ruta al template Quarto
@@ -1214,17 +1244,17 @@ generate_student_reports <- function(student_ids,
   results_df <- bind_rows(results)
   
   success_count <- sum(results_df$status == "success")
-  message(sprintf("\n✓ Reportes generados: %d/%d exitosos", success_count, length(student_ids)))
+  message(sprintf("\n[OK] Reportes generados: %d/%d exitosos", success_count, length(student_ids)))
   
   return(results_df)
 }
 
-#' Generar reporte de sesión para docente
+#' Generar reporte de sesion para docente
 #'
-#' @param session_id ID de la sesión
+#' @param session_id ID de la sesion
 #' @param metadata Lista de metadatos (de prepare_report_metadata) o ruta a archivo .rds
 #' @param output_dir Directorio de salida para el PDF
-#' @param output_name Nombre del archivo de salida (sin extensión)
+#' @param output_name Nombre del archivo de salida (sin extension)
 #' @param template Ruta al template Quarto (usa ReporteDocente.qmd por defecto)
 #' @param working_dir Directorio de trabajo para Quarto
 #'
@@ -1243,7 +1273,7 @@ generate_session_report <- function(session_id,
                                      template = NULL,
                                      working_dir = NULL) {
   
-  message("Generando reporte de sesión...")
+  message("Generando reporte de sesion...")
   
   # Si metadata es una ruta, cargar el archivo
   if (is.character(metadata) && length(metadata) == 1) {
@@ -1311,29 +1341,30 @@ generate_session_report <- function(session_id,
   result <- list(
     session_id = session_id,
     status = if (file_exists) "success" else "failed",
-    message = if (file_exists) "Reporte de sesión generado exitosamente" else sprintf("Error al generar reporte (código: %d)", status),
+    message = if (file_exists) "Reporte de sesion generado exitosamente" else sprintf("Error al generar reporte (codigo: %d)", status),
     output_file = if (file_exists) output_file else NA_character_
   )
   
   if (file_exists) {
-    message(sprintf("✓ Reporte de sesión generado: %s", basename(output_file)))
+    message(sprintf("[OK] Reporte de sesion generado: %s", basename(output_file)))
   } else {
-    warning("✗ Error generando reporte de sesión")
+    warning("[X] Error generando reporte de sesion")
   }
   
   return(result)
 }
 
-#' Generar todos los reportes de una evaluación
+#' Generar todos los reportes de una evaluacion
 #'
 #' @param metadata Lista de metadatos o ruta a archivo .rds
-#' @param session_id ID de la sesión a procesar
+#' @param session_id ID de la sesion a procesar
 #' @param output_dir Directorio base de salida
 #' @param generate_individual Generar reportes individuales de estudiantes
-#' @param generate_session Generar reporte de sesión para docente
+#' @param generate_session Generar reporte de sesion para docente
+#' @param generate_psychometric Generar reporte psicometrico
 #' @param working_dir Directorio de trabajo para Quarto
 #'
-#' @return Lista con resultados de generación
+#' @return Lista con resultados de generacion
 #' @export
 generate_all_reports <- function(metadata,
                                   session_id,
@@ -1343,9 +1374,9 @@ generate_all_reports <- function(metadata,
                                   generate_psychometric = FALSE,
                                   working_dir = NULL) {
   
-  message("\n", strrep("═", 60))
-  message("GENERACIÓN DE REPORTES")
-  message(strrep("═", 60), "\n")
+  message("\n", strrep("=", 60))
+  message("GENERACION DE REPORTES")
+  message(strrep("=", 60), "\n")
   
   # Cargar metadatos si es ruta
   if (is.character(metadata) && length(metadata) == 1) {
@@ -1360,7 +1391,7 @@ generate_all_reports <- function(metadata,
   
   results <- list()
   
-  # Obtener estudiantes de la sesión
+  # Obtener estudiantes de la sesion
   if (!is.null(md$sessions)) {
     session_row <- md$sessions %>%
       filter(session_id == !!session_id) %>%
@@ -1375,7 +1406,7 @@ generate_all_reports <- function(metadata,
     student_ids <- unique(md$results$student_id)
   }
   
-  # Reporte de sesión
+  # Reporte de sesion
   if (generate_session) {
     session_result <- generate_session_report(
       session_id = session_id,
@@ -1398,7 +1429,7 @@ generate_all_reports <- function(metadata,
     results$individual_reports <- individual_results
   }
   
-  # Reporte psicométrico
+  # Reporte psicometrico
   if (generate_psychometric) {
     psychometric_result <- generate_operator_report(
       session_id = session_id,
@@ -1414,23 +1445,23 @@ generate_all_reports <- function(metadata,
     unlink(data_file)
   }
   
-  message("\n", strrep("═", 60))
-  message("✓ GENERACIÓN DE REPORTES COMPLETA")
-  message(strrep("═", 60), "\n")
+  message("\n", strrep("=", 60))
+  message("[OK] GENERACION DE REPORTES COMPLETA")
+  message(strrep("=", 60), "\n")
   
   invisible(results)
 }
 
 # ==============================================================================
-# CONVERSIÓN A NOTAS
+# CONVERSION A NOTAS
 # ==============================================================================
 
 #' Convertir porcentaje a nota en escala chilena (1.0 - 7.0)
 #'
 #' @param porcentaje Vector de porcentajes (0-100)
-#' @param nota_minima Nota mínima (default: 1.0)
-#' @param nota_maxima Nota máxima (default: 7.0)
-#' @param nota_aprobacion Nota de aprobación (default: 4.0)
+#' @param nota_minima Nota minima (default: 1.0)
+#' @param nota_maxima Nota maxima (default: 7.0)
+#' @param nota_aprobacion Nota de aprobacion (default: 4.0)
 #' @param exigencia Porcentaje de exigencia para aprobar (default: 60)
 #'
 #' @return Vector de notas
@@ -1447,13 +1478,13 @@ porcentaje_to_nota <- function(porcentaje,
   
   nota <- ifelse(
     porcentaje < exigencia,
-    # Bajo el umbral de aprobación: escala entre nota_minima y nota_aprobacion
+    # Bajo el umbral de aprobacion: escala entre nota_minima y nota_aprobacion
     nota_minima + (nota_aprobacion - nota_minima) * (porcentaje / exigencia),
     # Sobre el umbral: escala entre nota_aprobacion y nota_maxima
     nota_aprobacion + (nota_maxima - nota_aprobacion) * ((porcentaje - exigencia) / (100 - exigencia))
   )
   
-  # Asegurar límites
+  # Asegurar limites
   nota <- pmax(nota_minima, pmin(nota_maxima, nota))
   
   round(nota, 1)
@@ -1472,19 +1503,19 @@ add_grades <- function(student_scores, ...) {
 }
 
 # ==============================================================================
-# ANÁLISIS PSICOMÉTRICO
+# ANALISIS PSICOMETRICO
 # ==============================================================================
 
-#' Calcular índice de dificultad de ítems
+#' Calcular indice de dificultad de items
 #'
-#' El índice de dificultad es la proporción de estudiantes que responden
-#' correctamente. Valores cercanos a 0 indican ítems difíciles, cercanos a 1
-#' indican ítems fáciles. El rango ideal es 0.3-0.7.
+#' El indice de dificultad es la proporcion de estudiantes que responden
+#' correctamente. Valores cercanos a 0 indican items dificiles, cercanos a 1
+#' indican items faciles. El rango ideal es 0.3-0.7.
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param by_form Si TRUE, calcula por forma además de global
+#' @param by_form Si TRUE, calcula por forma ademas de global
 #'
-#' @return Data frame con índices de dificultad por ítem
+#' @return Data frame con indices de dificultad por item
 #' @export
 calculate_difficulty_index <- function(scored_data, by_form = FALSE) {
   
@@ -1517,28 +1548,28 @@ calculate_difficulty_index <- function(scored_data, by_form = FALSE) {
   difficulty <- difficulty %>%
     mutate(
       clasificacion = case_when(
-        dificultad < 0.20 ~ "Muy difícil",
-        dificultad < 0.40 ~ "Difícil",
+        dificultad < 0.20 ~ "Muy dificil",
+        dificultad < 0.40 ~ "Dificil",
         dificultad < 0.60 ~ "Moderado",
-        dificultad < 0.80 ~ "Fácil",
-        TRUE ~ "Muy fácil"
+        dificultad < 0.80 ~ "Facil",
+        TRUE ~ "Muy facil"
       )
     )
   
   return(difficulty)
 }
 
-#' Calcular índice de discriminación de ítems
+#' Calcular indice de discriminacion de items
 #'
-#' El índice de discriminación mide qué tan bien un ítem distingue entre
-#' estudiantes de alto y bajo rendimiento. Se calcula como la correlación
-#' punto-biserial entre el ítem y el puntaje total.
+#' El indice de discriminacion mide que tan bien un item distingue entre
+#' estudiantes de alto y bajo rendimiento. Se calcula como la correlacion
+#' punto-biserial entre el item y el puntaje total.
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param method Método de cálculo: "pbis" (punto-biserial), "d27" (grupos extremos)
-#' @param id_col Columna de identificación de estudiante
+#' @param method Metodo de calculo: "pbis" (punto-biserial), "d27" (grupos extremos)
+#' @param id_col Columna de identificacion de estudiante
 #'
-#' @return Data frame con índices de discriminación por ítem
+#' @return Data frame con indices de discriminacion por item
 #' @export
 calculate_discrimination_index <- function(scored_data, 
                                             method = c("pbis", "d27"),
@@ -1564,7 +1595,7 @@ calculate_discrimination_index <- function(scored_data,
     left_join(student_totals, by = id_col)
   
   if (method == "pbis") {
-    # Correlación punto-biserial
+    # Correlacion punto-biserial
     discrimination <- scored_with_total %>%
       group_by(Origen) %>%
       summarise(
@@ -1574,7 +1605,7 @@ calculate_discrimination_index <- function(scored_data,
         .groups = "drop"
       )
   } else {
-    # Método D27 (grupos extremos 27% superior e inferior)
+    # Metodo D27 (grupos extremos 27% superior e inferior)
     n_students <- nrow(student_totals)
     cutoff_n <- ceiling(n_students * 0.27)
     
@@ -1589,7 +1620,7 @@ calculate_discrimination_index <- function(scored_data,
         )
       )
     
-    # Calcular proporción correcta por grupo
+    # Calcular proporcion correcta por grupo
     scored_with_groups <- scored_with_total %>%
       left_join(student_totals %>% select(all_of(id_col), grupo), by = id_col) %>%
       filter(grupo %in% c("alto", "bajo"))
@@ -1605,7 +1636,7 @@ calculate_discrimination_index <- function(scored_data,
       select(Origen, n_respuestas, discriminacion)
   }
   
-  # Clasificar discriminación
+  # Clasificar discriminacion
   discrimination <- discrimination %>%
     mutate(
       clasificacion = case_when(
@@ -1623,13 +1654,13 @@ calculate_discrimination_index <- function(scored_data,
 
 #' Calcular confiabilidad de la prueba (KR-20 / Alpha de Cronbach)
 #'
-#' Para ítems dicotómicos (correcto/incorrecto), KR-20 es equivalente a Alpha.
+#' Para items dicotomicos (correcto/incorrecto), KR-20 es equivalente a Alpha.
 #' Valores > 0.7 se consideran aceptables, > 0.8 buenos, > 0.9 excelentes.
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param id_col Columna de identificación de estudiante
+#' @param id_col Columna de identificacion de estudiante
 #'
-#' @return Lista con coeficiente de confiabilidad y estadísticas relacionadas
+#' @return Lista con coeficiente de confiabilidad y estadisticas relacionadas
 #' @export
 calculate_reliability <- function(scored_data, id_col = "student_id") {
   
@@ -1638,7 +1669,7 @@ calculate_reliability <- function(scored_data, id_col = "student_id") {
     scored_data <- scored_data %>% rename(is_correcta = is_correct)
   }
   
-  # Crear matriz de respuestas (filas = estudiantes, columnas = ítems)
+  # Crear matriz de respuestas (filas = estudiantes, columnas = items)
   response_matrix <- scored_data %>%
     select(all_of(id_col), Origen, is_correcta) %>%
     mutate(is_correcta = as.numeric(is_correcta)) %>%
@@ -1658,7 +1689,7 @@ calculate_reliability <- function(scored_data, id_col = "student_id") {
   n_items <- ncol(response_matrix)
   n_students <- nrow(response_matrix)
   
-  # Proporciones de respuestas correctas por ítem
+  # Proporciones de respuestas correctas por item
   p <- colMeans(response_matrix, na.rm = TRUE)
   q <- 1 - p
   
@@ -1672,10 +1703,10 @@ calculate_reliability <- function(scored_data, id_col = "student_id") {
   # KR-20
   kr20 <- (n_items / (n_items - 1)) * (1 - sum_pq / var_total)
   
-  # Error estándar de medida (SEM)
+  # Error estandar de medida (SEM)
   sem <- sqrt(var_total) * sqrt(1 - kr20)
   
-  # Clasificación
+  # Clasificacion
   clasificacion <- case_when(
     kr20 < 0.5 ~ "Inaceptable",
     kr20 < 0.6 ~ "Pobre",
@@ -1687,7 +1718,7 @@ calculate_reliability <- function(scored_data, id_col = "student_id") {
   
   list(
     kr20 = kr20,
-    alpha = kr20,  # Son equivalentes para ítems dicotómicos
+    alpha = kr20,  # Son equivalentes para items dicotomicos
     sem = sem,
     n_items = n_items,
     n_students = n_students,
@@ -1698,15 +1729,15 @@ calculate_reliability <- function(scored_data, id_col = "student_id") {
   )
 }
 
-#' Análisis de distractores
+#' Analisis de distractores
 #'
-#' Analiza la distribución de respuestas por alternativa, separando por
+#' Analiza la distribucion de respuestas por alternativa, separando por
 #' grupos de rendimiento (alto, medio, bajo).
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param id_col Columna de identificación de estudiante
+#' @param id_col Columna de identificacion de estudiante
 #'
-#' @return Data frame con análisis de distractores por ítem
+#' @return Data frame con analisis de distractores por item
 #' @export
 analyze_distractors <- function(scored_data, id_col = "student_id") {
   
@@ -1757,12 +1788,12 @@ analyze_distractors <- function(scored_data, id_col = "student_id") {
 #' Comparar equivalencia entre formas
 #'
 #' Analiza si las diferentes formas/versiones del examen son equivalentes
-#' en términos de dificultad.
+#' en terminos de dificultad.
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param id_col Columna de identificación de estudiante
+#' @param id_col Columna de identificacion de estudiante
 #'
-#' @return Lista con estadísticas de comparación entre formas
+#' @return Lista con estadisticas de comparacion entre formas
 #' @export
 compare_forms <- function(scored_data, id_col = "student_id") {
   
@@ -1771,7 +1802,7 @@ compare_forms <- function(scored_data, id_col = "student_id") {
     scored_data <- scored_data %>% rename(is_correcta = is_correct)
   }
   
-  # Calcular estadísticas por forma
+  # Calcular estadisticas por forma
   form_stats <- scored_data %>%
     group_by(Forma, across(all_of(id_col))) %>%
     summarise(
@@ -1792,7 +1823,7 @@ compare_forms <- function(scored_data, id_col = "student_id") {
     ) %>%
     arrange(Forma)
   
-  # ANOVA si hay más de una forma
+  # ANOVA si hay mas de una forma
   if (n_distinct(scored_data$Forma) > 1) {
     student_scores <- scored_data %>%
       group_by(Forma, across(all_of(id_col))) %>%
@@ -1827,15 +1858,15 @@ compare_forms <- function(scored_data, id_col = "student_id") {
   )
 }
 
-#' Detectar ítems problemáticos
+#' Detectar items problematicos
 #'
-#' Identifica ítems que podrían necesitar revisión basándose en
-#' criterios psicométricos.
+#' Identifica items que podrian necesitar revision basandose en
+#' criterios psicometricos.
 #'
-#' @param difficulty Data frame de índices de dificultad
-#' @param discrimination Data frame de índices de discriminación
+#' @param difficulty Data frame de indices de dificultad
+#' @param discrimination Data frame de indices de discriminacion
 #'
-#' @return Data frame con ítems problemáticos y razones
+#' @return Data frame con items problematicos y razones
 #' @export
 detect_problematic_items <- function(difficulty, discrimination) {
   
@@ -1851,16 +1882,16 @@ detect_problematic_items <- function(difficulty, discrimination) {
   item_analysis <- item_analysis %>%
     mutate(
       problemas = case_when(
-        discriminacion < 0 ~ "Discriminación negativa",
-        dificultad < 0.10 ~ "Demasiado difícil",
-        dificultad > 0.95 ~ "Demasiado fácil",
-        discriminacion < 0.15 ~ "Baja discriminación",
+        discriminacion < 0 ~ "Discriminacion negativa",
+        dificultad < 0.10 ~ "Demasiado dificil",
+        dificultad > 0.95 ~ "Demasiado facil",
+        discriminacion < 0.15 ~ "Baja discriminacion",
         TRUE ~ NA_character_
       ),
       requiere_revision = !is.na(problemas)
     )
   
-  # Filtrar solo problemáticos
+  # Filtrar solo problematicos
   problematic <- item_analysis %>%
     filter(requiere_revision) %>%
     arrange(discriminacion)
@@ -1873,35 +1904,35 @@ detect_problematic_items <- function(difficulty, discrimination) {
   )
 }
 
-#' Realizar análisis psicométrico completo
+#' Realizar analisis psicometrico completo
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param id_col Columna de identificación de estudiante
+#' @param id_col Columna de identificacion de estudiante
 #'
-#' @return Lista con todos los análisis psicométricos
+#' @return Lista con todos los analisis psicometricos
 #' @export
 run_psychometric_analysis <- function(scored_data, id_col = "student_id") {
   
-  message("Ejecutando análisis psicométrico...")
+  message("Ejecutando analisis psicometrico...")
   
-  # Calcular todos los índices
+  # Calcular todos los indices
   difficulty <- calculate_difficulty_index(scored_data)
-  message("  ✓ Índices de dificultad calculados")
+  message("  [OK] Indices de dificultad calculados")
   
   discrimination <- calculate_discrimination_index(scored_data, id_col = id_col)
-  message("  ✓ Índices de discriminación calculados")
+  message("  [OK] Indices de discriminacion calculados")
   
   reliability <- calculate_reliability(scored_data, id_col = id_col)
-  message(sprintf("  ✓ Confiabilidad (KR-20): %.3f (%s)", reliability$kr20, reliability$clasificacion))
+  message(sprintf("  [OK] Confiabilidad (KR-20): %.3f (%s)", reliability$kr20, reliability$clasificacion))
   
   distractors <- analyze_distractors(scored_data, id_col = id_col)
-  message("  ✓ Análisis de distractores completado")
+  message("  [OK] Analisis de distractores completado")
   
   form_comparison <- compare_forms(scored_data, id_col = id_col)
-  message(sprintf("  ✓ Comparación de %d formas completada", form_comparison$n_forms))
+  message(sprintf("  [OK] Comparacion de %d formas completada", form_comparison$n_forms))
   
   problematic <- detect_problematic_items(difficulty, discrimination)
-  message(sprintf("  ✓ Detectados %d ítems problemáticos (%.1f%%)", 
+  message(sprintf("  [OK] Detectados %d items problematicos (%.1f%%)", 
                   problematic$n_problematic, problematic$pct_problematic))
   
   list(
@@ -1915,15 +1946,15 @@ run_psychometric_analysis <- function(scored_data, id_col = "student_id") {
   )
 }
 
-#' Generar reporte psicométrico para operador
+#' Generar reporte psicometrico para operador
 #'
-#' @param session_id ID de la sesión (puede ser NA para análisis global)
+#' @param session_id ID de la sesion (puede ser NA para analisis global)
 #' @param metadata Lista de metadatos o ruta a archivo .rds
 #' @param output_dir Directorio de salida para el PDF
-#' @param output_name Nombre del archivo de salida (sin extensión)
+#' @param output_name Nombre del archivo de salida (sin extension)
 #' @param template Ruta al template Quarto (usa ReporteOperador.qmd por defecto)
 #' @param working_dir Directorio de trabajo para Quarto
-#' @param id_col Columna de identificación de estudiante
+#' @param id_col Columna de identificacion de estudiante
 #'
 #' @return Lista con status y ruta del archivo generado
 #' @export
@@ -1935,7 +1966,7 @@ generate_operator_report <- function(session_id = NULL,
                                       working_dir = NULL,
                                       id_col = "student_id") {
   
-  message("Generando reporte psicométrico para operador...")
+  message("Generando reporte psicometrico para operador...")
   
   # Cargar metadatos si es ruta
   if (is.character(metadata) && length(metadata) == 1) {
@@ -1947,7 +1978,7 @@ generate_operator_report <- function(session_id = NULL,
     md <- metadata
   }
   
-  # Filtrar por sesión si se especifica
+  # Filtrar por sesion si se especifica
   scored_data <- md$results
   if (!is.null(session_id) && !is.null(md$sessions)) {
     session_row <- md$sessions %>%
@@ -1961,10 +1992,10 @@ generate_operator_report <- function(session_id = NULL,
     }
   }
   
-  # Ejecutar análisis psicométrico
+  # Ejecutar analisis psicometrico
   psychometric <- run_psychometric_analysis(scored_data, id_col = id_col)
   
-  # Agregar análisis al metadata
+  # Agregar analisis al metadata
   md$psychometric <- psychometric
   
   # Guardar metadata aumentado
@@ -2027,7 +2058,7 @@ generate_operator_report <- function(session_id = NULL,
   
   result <- list(
     status = if (file_exists) "success" else "failed",
-    message = if (file_exists) "Reporte psicométrico generado exitosamente" else sprintf("Error al generar reporte (código: %d)", status),
+    message = if (file_exists) "Reporte psicometrico generado exitosamente" else sprintf("Error al generar reporte (codigo: %d)", status),
     output_file = if (file_exists) output_file else NA_character_,
     psychometric_summary = list(
       kr20 = psychometric$reliability$kr20,
@@ -2038,13 +2069,13 @@ generate_operator_report <- function(session_id = NULL,
   )
   
   if (file_exists) {
-    message(sprintf("✓ Reporte psicométrico generado: %s", basename(output_file)))
-    message(sprintf("  KR-20: %.3f | Ítems problemáticos: %d | Formas equivalentes: %s",
+    message(sprintf("[OK] Reporte psicometrico generado: %s", basename(output_file)))
+    message(sprintf("  KR-20: %.3f | Items problematicos: %d | Formas equivalentes: %s",
                     psychometric$reliability$kr20,
                     psychometric$problematic_items$n_problematic,
-                    ifelse(psychometric$form_comparison$forms_equivalent, "Sí", "No")))
+                    ifelse(psychometric$form_comparison$forms_equivalent, "Si", "No")))
   } else {
-    warning("✗ Error generando reporte psicométrico")
+    warning("[X] Error generando reporte psicometrico")
   }
   
   return(result)
