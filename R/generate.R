@@ -261,9 +261,6 @@ export_items_json <- function(exam_result, output_file = NULL) {
   config <- exam_result$config
   pool <- exam_result$pool
   results <- exam_result$exams_raw
-  
-  # Helper para acceso seguro
-  get_or_null <- function(x, name) if (!is.null(x[[name]])) x[[name]] else NULL
 
   exam_names <- names(results)
 
@@ -280,50 +277,29 @@ export_items_json <- function(exam_result, output_file = NULL) {
     if (is.na(forma)) forma <- i_exam
 
     lapply(seq_along(exam), function(i_q) {
-      q <- exam[[i_q]]
-      mi <- q$metainfo
-      
-      # Texto de la pregunta
-      question_lines <- q$question[nzchar(q$question)]
-      texto <- paste(question_lines, collapse = " ")
-      
-      # Alternativas
-      alternativas <- q$questionlist
-      
-      # Origen y eje
-      origen <- get_or_null(mi, "name")
-      if (is.null(origen)) origen <- get_or_null(mi, "file")
-      
-      eje <- if (!is.null(origen) && origen %in% names(pool$topic_lookup)) {
-        pool$topic_lookup[origen]
+      base <- parse_exam_item(exam[[i_q]])
+
+      # Eje: resolver el Origen contra el topic_lookup del pool
+      eje <- if (!is.null(base$Origen) && base$Origen %in% names(pool$topic_lookup)) {
+        pool$topic_lookup[base$Origen]
       } else {
         NA_character_
       }
-      
-      # Respuesta correcta
-      sol_log <- get_or_null(mi, "solution")
-      letra_correcta <- if (is.null(sol_log)) {
-        NA_character_
-      } else {
-        idx <- which(sol_log)
-        if (length(idx) == 1) letters[idx] else paste(letters[idx], collapse = ",")
-      }
-      
+
       # Semilla de ESTE item, con respaldo en la matriz [forma, posicion]
-      seed <- get_or_null(mi, "seed")
-      if (is.null(seed) && !is.null(seed_matrix) &&
+      seed <- base$Seed
+      if (is.na(seed) && !is.null(seed_matrix) &&
           i_exam <= nrow(seed_matrix) && i_q <= ncol(seed_matrix)) {
-        seed <- seed_matrix[i_exam, i_q]
+        seed <- as.integer(seed_matrix[i_exam, i_q])
       }
-      seed <- if (is.null(seed)) NA_integer_ else as.integer(seed)
 
       list(
-        Texto = texto,
-        Alternativas = alternativas,
+        Texto = base$Texto,
+        Alternativas = base$Alternativas,
         Eje = unname(eje),
-        Correcta = letra_correcta,
+        Correcta = base$Correcta,
         Seed = seed,
-        Origen = origen,
+        Origen = base$Origen,
         Forma = forma,
         Pregunta = i_q,
         Bimestre = config$period,
