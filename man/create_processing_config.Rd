@@ -14,7 +14,8 @@ create_processing_config(
   output_dir = "reports",
   form_mapping = NULL,
   generate_reports = FALSE,
-  id_col = "Rut"
+  id_col = "Rut",
+  layout = NULL
 )
 }
 \arguments{
@@ -38,6 +39,10 @@ create_processing_config(
 
 \item{id_col}{Nombre de la columna identificadora de estudiante en los
 resultados (default: "Rut")}
+
+\item{layout}{Objeto answer_sheet_layout que describe la hoja aplicada. Si se
+da, la lectura se dirige por el contrato en vez de adivinar por convencion,
+y `num_questions` se toma de el}
 }
 \value{
 Objeto de clase "processing_config"

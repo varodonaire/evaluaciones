@@ -20,4 +20,6 @@
 #' @importFrom utils head write.csv
 #' @importFrom tidyselect matches where
 #' @importFrom digest digest
+#' @importFrom dplyr bind_cols
+#' @importFrom rlang .data :=
 NULL

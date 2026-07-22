@@ -42,21 +42,27 @@ process_assessment <- function(config, sink = NULL, exam_result = NULL,
   # 1. Cargar datos
   data <- load_processing_data(config)
   
-  # 2. Transformar resultados
-  message("Transformando datos...")
-  clean_results <- data$results %>%
-    normalize_rut_columns() %>%
-    standardize_response_columns(config$num_questions) %>%
-    convert_form_codes(config$form_mapping)
-  
-  # 3. Normalizar respuestas
-  response_cols <- grep("^Respuestas-", colnames(clean_results), value = TRUE)
-  clean_results <- clean_results %>%
-    mutate(across(all_of(response_cols), ~ tolower(trimws(as.character(.)))))
-  
-  # 4. Pivotar a formato largo
-  results_long <- pivot_responses_long(clean_results)
-  
+  # 2-4. Transformar a formato largo. Con un layout la lectura sigue el
+  # contrato declarado; sin el, las heuristicas de siempre.
+  if (!is.null(config$layout)) {
+    message("Leyendo la hoja segun el layout ", config$layout$layout_id, "...")
+    results_long <- sheet_read(config$layout, data$results) %>%
+      rename(!!config$id_col := "student_id") %>%
+      convert_form_codes(config$form_mapping)
+  } else {
+    message("Transformando datos...")
+    clean_results <- data$results %>%
+      normalize_rut_columns() %>%
+      standardize_response_columns(config$num_questions) %>%
+      convert_form_codes(config$form_mapping)
+
+    response_cols <- grep("^Respuestas-", colnames(clean_results), value = TRUE)
+    clean_results <- clean_results %>%
+      mutate(across(all_of(response_cols), ~ tolower(trimws(as.character(.)))))
+
+    results_long <- pivot_responses_long(clean_results)
+  }
+
   # 5. Filtrar por sesion si se especifica
   if (!is.null(config$session_id) && !is.null(data$sessions)) {
     session_students <- get_session_students(data$sessions, config$session_id)

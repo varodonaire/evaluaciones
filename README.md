@@ -251,6 +251,121 @@ rs_list_runs(sink)     # corridas disponibles
 rs_read_run(sink, id)  # corrida + respuestas
 ```
 
+## Contrato de hoja de respuesta
+
+Es la API entre quien **genera** la hoja y quien la **procesa**. El layout
+describe qué hay en la hoja; el reader, cómo traducir lo que devolvió el
+escaneo. Separarlos permite cambiar de lector sin tocar el resto.
+
+```r
+hoja <- answer_sheet_layout(
+  n_questions = 25,                       # no es fijo
+  choices = c("a", "b", "c", "d", "e"),
+  fields = list(
+    sheet_field("rut",         role = "student_id", kind = "digits", length = 8),
+    sheet_field("verificador", role = "student_id", kind = "digits", length = 1,
+                value_map = list("10" = "K")),
+    sheet_field("forma",       role = "form",    kind = "letter"),
+    sheet_field("respuestas",  role = "answers", kind = "choice_grid")
+  ),
+  reader = sheet_reader_excel(
+    rut = "Rut-0", verificador = "verificador-0",
+    forma = "Forma-0", answers_pattern = "^Resp"
+  )
+)
+
+respuestas <- sheet_read(hoja, "escaneo.xlsx")
+#> student_id  Forma  Pregunta  Respuesta
+```
+
+### Roles
+
+Lo que el paquete entiende no son los nombres de los campos sino su **rol**:
+
+| Rol | Significado |
+|---|---|
+| `student_id` | Identifica al estudiante. Puede venir partido en varios campos, que se concatenan en el orden declarado |
+| `form` | La forma o versión del examen |
+| `answers` | La grilla de respuestas |
+| `info` | Cualquier otro dato que se quiera conservar |
+
+Eso es lo que permite que el RUT chileno —cuerpo más dígito verificador, que
+puede ser `K`— se exprese sin código especial: dos campos con rol `student_id` y
+un `value_map` que traduce el 10 que marca el lector.
+
+### El número de preguntas no es fijo
+
+El layout lo declara y todo se dimensiona a partir de ahí. Si el archivo
+escaneado no trae exactamente esas columnas, `sheet_read()` falla diciendo
+cuántas esperaba y cuántas encontró, en vez de renombrar por posición y seguir.
+
+Las alternativas pueden variar por pregunta:
+
+```r
+answer_sheet_layout(
+  n_questions = 3,
+  choices = list(c("a","b","c","d"), c("a","b","c","d","e"), c("v","f")),
+  ...
+)
+```
+
+Una respuesta fuera de las alternativas de *su* pregunta produce un aviso; las
+omisiones no, porque son legítimas.
+
+### El contrato viaja como JSON
+
+Es la forma en que el editor de pruebas se lo entregará al paquete:
+
+```r
+layout_to_json(hoja, "hoja.json")
+hoja <- layout_from_json("hoja.json")
+```
+
+```json
+{
+  "layout_id": "udd-hoja-25p",
+  "version": 1,
+  "n_questions": 25,
+  "choices": [["a","b","c","d","e"], ...],
+  "fields": [
+    { "name": "rut", "role": "student_id", "kind": "digits",
+      "length": 8, "domain": null, "value_map": null, "required": true },
+    { "name": "verificador", "role": "student_id", "kind": "digits",
+      "length": 1, "value_map": { "10": "K" }, "required": true },
+    { "name": "forma", "role": "form", "kind": "letter", "length": null },
+    { "name": "respuestas", "role": "answers", "kind": "choice_grid" }
+  ],
+  "reader": {
+    "type": "excel_columns",
+    "mapping": { "rut": "Rut-0", "verificador": "verificador-0",
+                 "forma": "Forma-0" },
+    "answers_pattern": "^Resp"
+  }
+}
+```
+
+### Cambiar de lector
+
+El `type` del reader elige la implementación. Hoy existe `excel_columns`, que
+describe el archivo del lector óptico actual. El día que haya OMR propio se
+agrega un `type` nuevo con su geometría y **nada más del sistema cambia**: el
+layout, los roles y la salida normalizada son los mismos.
+
+```r
+readers_disponibles()
+#> "excel_columns"
+```
+
+### Usarlo en el procesamiento
+
+```r
+config <- create_processing_config(..., layout = hoja)
+```
+
+Con layout, la lectura sigue el contrato y `num_questions` se toma de él. Sin
+layout, el paquete usa las heurísticas de siempre, así que el flujo existente no
+cambia.
+
 ## Columna identificadora
 
 El pipeline de corrección trabaja con `Rut` y las plantillas de informe con
