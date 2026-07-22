@@ -166,11 +166,20 @@ mongo_doc_to_run <- function(doc) {
     x
   }
 
+  # Un objeto unico vuelve de mongo como data frame de una fila, que desanidar
+  # convierte en una lista de largo 1. `forms` si es una coleccion y conserva
+  # esa forma; el resto hay que desenvolverlo.
+  unico <- function(x) {
+    y <- desanidar(x)
+    if (is.list(y) && length(y) == 1 && is.null(names(y))) y[[1]] else y
+  }
+
   run$forms <- if (is.null(run$forms)) list() else desanidar(run$forms)
-  run$exam_config <- desanidar(run$exam_config)
-  run$processing_config <- desanidar(run$processing_config)
-  run$versions <- desanidar(run$versions)
-  run$question_store <- desanidar(run$question_store)
+  run$exam_config <- unico(run$exam_config)
+  run$processing_config <- unico(run$processing_config)
+  run$versions <- unico(run$versions)
+  run$question_store <- unico(run$question_store)
+  run$analysis <- unico(run$analysis)
 
   run[["_id"]] <- NULL
   run
