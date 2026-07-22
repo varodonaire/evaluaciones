@@ -27,7 +27,8 @@ Imports:
     jsonlite,
     readxl,
     writexl,
-    exams
+    exams,
+    digest
 Suggests:
     quarto,
     testthat (>= 3.0.0),

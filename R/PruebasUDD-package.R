@@ -19,4 +19,5 @@
 #' @importFrom stats aov cor median quantile sd setNames var
 #' @importFrom utils head write.csv
 #' @importFrom tidyselect matches where
+#' @importFrom digest digest
 NULL
