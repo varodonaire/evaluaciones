@@ -20,7 +20,7 @@
 #     "output_dir": "salida" }
 # ==============================================================================
 
-ACCIONES <- c("generate", "score", "reproduce", "list_runs",
+ACCIONES <- c("generate", "score", "report", "reproduce", "list_runs",
               "search_questions", "migrate_questions")
 
 #' Acciones que acepta run_job()
@@ -61,6 +61,7 @@ run_job <- function(spec) {
   ejecutar <- switch(spec$action,
     generate = job_generate,
     score = job_score,
+    report = job_report,
     reproduce = job_reproduce,
     list_runs = job_list_runs,
     search_questions = job_search_questions,
@@ -248,6 +249,80 @@ job_score <- function(spec) {
     n_estudiantes = nrow(resultado$student_scores),
     n_respuestas = nrow(resultado$scored_data),
     promedio = mean(resultado$student_scores$porcentaje, na.rm = TRUE)
+  )
+}
+
+#' Generar los informes de una corrida
+#' @keywords internal
+job_report <- function(spec) {
+  if (is.null(spec$run_id)) {
+    stop("La accion 'report' necesita 'run_id'.")
+  }
+
+  destino <- sink_from_spec(spec$sink)
+  corrida <- rs_read_run(destino, spec$run_id)
+  scored <- responses_to_scored(corrida$responses)
+
+  archivos <- spec$files %||% list()
+  estudiantes <- if (!is.null(archivos$students)) {
+    safe_read(archivos$students, "csv")
+  } else {
+    NULL
+  }
+
+  # El informe del docente muestra los enunciados y sus alternativas, que no
+  # viven en las respuestas sino en el items.json de la generacion.
+  items_df <- if (!is.null(archivos$items)) {
+    bind_rows(safe_read(archivos$items, "json"))
+  } else {
+    NULL
+  }
+
+  # Los nombres legibles de los ejes se dan como {"slug": "Nombre"}
+  ejes_df <- if (!is.null(spec$ejes)) {
+    tibble(identificador = names(spec$ejes),
+           nombre = unlist(spec$ejes, use.names = FALSE))
+  } else {
+    NULL
+  }
+
+  salida <- spec$output_dir %||% "informes"
+  session_id <- spec$session_id %||% spec$run_id
+
+  # Los templates esperan una tabla de sesiones. Si la corrida no vino de una,
+  # se sintetiza tratando la corrida misma como la sesion: los estudiantes son
+  # los que efectivamente respondieron.
+  sessions_df <- tibble(
+    session_id = session_id,
+    assessment_id = as.character(corrida$run$assessment_id %||% NA_character_),
+    class_id = NA_character_,
+    date = as.Date(substr(corrida$run$applied_at %||% Sys.Date(), 1, 10)),
+    group_name = spec$group_name %||% as.character(corrida$run$assessment_id %||% "Sesion"),
+    students = list(unique(scored$student_id))
+  )
+
+  resultado <- generate_all_reports(
+    metadata = prepare_report_metadata(
+      scored_data = scored,
+      students_df = estudiantes,
+      items_df = items_df,
+      ejes_df = ejes_df,
+      sessions_df = sessions_df
+    ),
+    session_id = session_id,
+    output_dir = salida,
+    generate_individual = spec$individual %||% TRUE,
+    generate_session = spec$session %||% TRUE,
+    generate_psychometric = spec$psychometric %||% FALSE
+  )
+
+  individuales <- resultado$individual_reports
+  list(
+    run_id = spec$run_id,
+    output_dir = normalizePath(salida, mustWork = FALSE),
+    pdfs = dir(salida, pattern = "\\.pdf$"),
+    n_individuales = if (is.null(individuales)) 0L else sum(individuales$status == "success"),
+    n_fallidos = if (is.null(individuales)) 0L else sum(individuales$status != "success")
   )
 }
 

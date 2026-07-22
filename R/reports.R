@@ -20,6 +20,90 @@ get_template_path <- function(template_name) {
  return(pkg_path)
 }
 
+#' Asegurar un locale UTF-8 para los procesos hijos
+#'
+#' Devuelve una funcion que restaura el estado anterior. Si el locale actual ya
+#' es UTF-8 no toca nada.
+#'
+#' @return Funcion de restauracion
+#' @keywords internal
+force_utf8_locale <- function() {
+  actual <- Sys.getenv("LC_ALL", unset = "")
+  if (!nzchar(actual)) {
+    actual_efectivo <- Sys.getenv("LANG", unset = "")
+  } else {
+    actual_efectivo <- actual
+  }
+
+  if (grepl("UTF-?8", actual_efectivo, ignore.case = TRUE)) {
+    return(function() invisible(NULL))
+  }
+
+  Sys.setenv(LC_ALL = "en_US.UTF-8")
+  function() {
+    if (nzchar(actual)) Sys.setenv(LC_ALL = actual) else Sys.unsetenv("LC_ALL")
+    invisible(NULL)
+  }
+}
+
+#' Renderizar un template de Quarto a PDF
+#'
+#' Copia el template a un directorio temporal y renderiza ahi. Renderizar en el
+#' directorio del paquete deja `.tex`, `.pdf` y carpetas de apoyo dentro de la
+#' instalacion, falla si esta en un sitio de solo lectura, y no soporta dos
+#' informes a la vez. Ademas evita `--output-dir`, cuya interaccion con `-o` no
+#' produce el PDF donde se espera.
+#'
+#' @param template Ruta al .qmd
+#' @param params Lista nombrada de parametros para el template
+#' @param output_file Ruta final del PDF
+#' @param quiet Silenciar la salida de Quarto
+#'
+#' @return TRUE si el PDF quedo escrito
+#' @keywords internal
+render_quarto_report <- function(template, params, output_file, quiet = TRUE) {
+  if (!file.exists(template)) {
+    stop(sprintf("Template no encontrado: %s", template))
+  }
+
+  trabajo <- tempfile("quarto")
+  dir.create(trabajo, recursive = TRUE)
+  on.exit(unlink(trabajo, recursive = TRUE), add = TRUE)
+
+  copia <- file.path(trabajo, basename(template))
+  file.copy(template, copia, overwrite = TRUE)
+
+  # Los parametros se pasan como rutas absolutas: quarto corre en otro directorio
+  args_params <- vapply(names(params), function(n) {
+    sprintf('-P %s:"%s"', n, params[[n]])
+  }, character(1))
+
+  cmd <- sprintf('quarto render "%s" --to pdf %s',
+                 copia, paste(args_params, collapse = " "))
+
+  # Los enunciados llevan tildes. Si el proceso hijo hereda un locale que no es
+  # UTF-8, R no puede ni siquiera parsear los trozos de codigo del template y
+  # falla con "unexpected input". Se fuerza aqui y no en cada .qmd, para que
+  # valga tambien para las plantillas que se escriban despues.
+  restaurar <- force_utf8_locale()
+  on.exit(restaurar(), add = TRUE)
+
+  system(cmd, ignore.stdout = quiet, ignore.stderr = quiet)
+
+  producido <- file.path(trabajo, sub("\\.qmd$", ".pdf", basename(template)))
+  if (!file.exists(producido)) {
+    return(FALSE)
+  }
+
+  destino <- dirname(output_file)
+  if (!dir.exists(destino)) {
+    dir.create(destino, recursive = TRUE)
+  }
+  file.copy(producido, output_file, overwrite = TRUE)
+
+  file.exists(output_file)
+}
+
 #' Preparar metadatos en formato compatible con templates
 #'
 #' Esta funcion prepara los datos en el formato exacto que esperan los templates
@@ -69,10 +153,20 @@ prepare_report_metadata <- function(scored_data,
       .groups = "drop"
     )
   
-  # Asegurar que students_df tenga columna student_id
+  # Asegurar que students_df tenga columna student_id. La tabla de estudiantes
+  # puede identificar con otro nombre que los datos calificados: es lo normal
+  # cuando estos ya vienen renombrados desde el sink.
   if (!is.null(students_df)) {
-    if (!"student_id" %in% colnames(students_df) && id_col %in% colnames(students_df)) {
-      students_df <- students_df %>% rename(student_id = !!sym(id_col))
+    if (!"student_id" %in% colnames(students_df)) {
+      col_estudiantes <- tryCatch(resolve_id_col(students_df),
+                                  error = function(e) NULL)
+      if (is.null(col_estudiantes)) {
+        stop(sprintf(
+          "La tabla de estudiantes no tiene columna identificadora. Columnas: %s",
+          paste(colnames(students_df), collapse = ", ")
+        ))
+      }
+      students_df <- students_df %>% rename(student_id = !!sym(col_estudiantes))
     }
     # Asegurar que tenga columna name
     if (!"name" %in% colnames(students_df)) {
@@ -193,45 +287,23 @@ generate_student_report <- function(student_id,
   safe_id <- gsub("[^a-zA-Z0-9]", "_", student_id)
   output_file <- file.path(output_dir, sprintf("%s.pdf", safe_id))
   
-  # Construir comando Quarto
-  cmd <- sprintf(
-    'quarto render "%s" --to pdf -P student_id:"%s" -P session_id:"%s" -P data_file:"%s" --output-dir "%s" -o "%s.pdf"',
+  file_exists <- render_quarto_report(
     template,
-    student_id,
-    session_id,
-    data_file,
-    output_dir,
-    safe_id
+    params = list(student_id = student_id, session_id = session_id,
+                  data_file = data_file),
+    output_file = output_file
   )
-  
-  # Cambiar directorio de trabajo si se especifica
-  old_wd <- NULL
-  if (!is.null(working_dir) && dir.exists(working_dir)) {
-    old_wd <- getwd()
-    setwd(working_dir)
-  }
-  
-  # Ejecutar Quarto
-  status <- system(cmd, ignore.stdout = TRUE, ignore.stderr = TRUE)
-  
-  # Restaurar directorio
-  if (!is.null(old_wd)) {
-    setwd(old_wd)
-  }
-  
+
   # Limpiar archivo temporal si fue creado
   if (!is.character(metadata)) {
     unlink(data_file)
   }
-  
-  # Verificar resultado
-  Sys.sleep(0.3)  # Esperar a que se escriba el archivo
-  file_exists <- file.exists(output_file)
-  
+
   result <- list(
     student_id = student_id,
     status = if (file_exists) "success" else "failed",
-    message = if (file_exists) "Reporte generado exitosamente" else sprintf("Error al generar reporte (codigo: %d)", status),
+    message = if (file_exists) "Reporte generado exitosamente" else
+      "Error al generar reporte: Quarto no produjo el PDF",
     output_file = if (file_exists) output_file else NA_character_
   )
   
@@ -351,44 +423,22 @@ generate_session_report <- function(session_id,
   }
   output_file <- file.path(output_dir, sprintf("%s.pdf", output_name))
   
-  # Construir comando Quarto
-  cmd <- sprintf(
-    'quarto render "%s" --to pdf -P session_id:"%s" -P data_file:"%s" --output-dir "%s" -o "%s.pdf"',
+  file_exists <- render_quarto_report(
     template,
-    session_id,
-    data_file,
-    output_dir,
-    output_name
+    params = list(session_id = session_id, data_file = data_file),
+    output_file = output_file
   )
-  
-  # Cambiar directorio de trabajo si se especifica
-  old_wd <- NULL
-  if (!is.null(working_dir) && dir.exists(working_dir)) {
-    old_wd <- getwd()
-    setwd(working_dir)
-  }
-  
-  # Ejecutar Quarto
-  status <- system(cmd, ignore.stdout = FALSE, ignore.stderr = FALSE)
-  
-  # Restaurar directorio
-  if (!is.null(old_wd)) {
-    setwd(old_wd)
-  }
-  
+
   # Limpiar archivo temporal si fue creado
   if (!is.character(metadata)) {
     unlink(data_file)
   }
-  
-  # Verificar resultado
-  Sys.sleep(0.5)
-  file_exists <- file.exists(output_file)
-  
+
   result <- list(
     session_id = session_id,
     status = if (file_exists) "success" else "failed",
-    message = if (file_exists) "Reporte de sesion generado exitosamente" else sprintf("Error al generar reporte (codigo: %d)", status),
+    message = if (file_exists) "Reporte de sesion generado exitosamente" else
+      "Error al generar reporte: Quarto no produjo el PDF",
     output_file = if (file_exists) output_file else NA_character_
   )
   
@@ -577,42 +627,20 @@ generate_operator_report <- function(session_id = NULL,
   }
   output_file <- file.path(output_dir, sprintf("%s.pdf", output_name))
   
-  # Construir comando Quarto
   session_param <- if (!is.null(session_id)) session_id else "ALL"
-  cmd <- sprintf(
-    'quarto render "%s" --to pdf -P session_id:"%s" -P data_file:"%s" --output-dir "%s" -o "%s.pdf"',
+
+  file_exists <- render_quarto_report(
     template,
-    session_param,
-    data_file,
-    output_dir,
-    output_name
+    params = list(session_id = session_param, data_file = data_file),
+    output_file = output_file
   )
-  
-  # Cambiar directorio si se especifica
-  old_wd <- NULL
-  if (!is.null(working_dir) && dir.exists(working_dir)) {
-    old_wd <- getwd()
-    setwd(working_dir)
-  }
-  
-  # Ejecutar Quarto
-  status <- system(cmd, ignore.stdout = FALSE, ignore.stderr = FALSE)
-  
-  # Restaurar directorio
-  if (!is.null(old_wd)) {
-    setwd(old_wd)
-  }
-  
-  # Limpiar archivo temporal
+
   unlink(data_file)
-  
-  # Verificar resultado
-  Sys.sleep(0.5)
-  file_exists <- file.exists(output_file)
-  
+
   result <- list(
     status = if (file_exists) "success" else "failed",
-    message = if (file_exists) "Reporte psicometrico generado exitosamente" else sprintf("Error al generar reporte (codigo: %d)", status),
+    message = if (file_exists) "Reporte psicometrico generado exitosamente" else
+      "Error al generar reporte: Quarto no produjo el PDF",
     output_file = if (file_exists) output_file else NA_character_,
     psychometric_summary = list(
       kr20 = psychometric$reliability$kr20,

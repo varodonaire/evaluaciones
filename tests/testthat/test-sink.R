@@ -119,6 +119,50 @@ test_that("normalize_responses enriquece con question_id desde la corrida", {
   expect_false(any(is.na(resp$content_hash)))
 })
 
+# Regresion: process_assessment ya normaliza, y el sink local volvia a
+# normalizar sobre nombres ya traducidos. Todo salvo el identificador y el
+# acierto se perdia en silencio.
+test_that("guardar respuestas ya normalizadas no las destruye", {
+  sink <- results_sink_local(withr::local_tempdir())
+  run <- build_run_record(exam_result_falso(n_forms = 1, n_questions = 3))
+  rs_write_run(sink, run)
+
+  ya_normalizadas <- normalize_responses(respuestas_falsas(n_questions = 3),
+                                         run$run_id, run = run)
+  rs_write_responses(sink, ya_normalizadas, run$run_id)
+
+  leidas <- rs_read_run(sink, run$run_id)$responses
+
+  expect_equal(nrow(leidas), nrow(ya_normalizadas))
+  for (col in c("form", "position", "slug", "section", "correcta",
+                "respuesta", "question_id")) {
+    expect_false(all(is.na(leidas[[col]])), info = col)
+  }
+  expect_equal(leidas$form, ya_normalizadas$form)
+  expect_equal(leidas$slug, ya_normalizadas$slug)
+})
+
+test_that("responses_to_scored devuelve los nombres que espera el analisis", {
+  sink <- results_sink_local(withr::local_tempdir())
+  run <- build_run_record(exam_result_falso(n_forms = 1, n_questions = 3))
+  rs_write_run(sink, run)
+  rs_write_responses(sink, respuestas_falsas(n_questions = 3), run$run_id)
+
+  scored <- responses_to_scored(rs_read_run(sink, run$run_id)$responses)
+
+  expect_true(all(c("student_id", "Forma", "Pregunta", "Origen", "Eje",
+                    "Correcta", "Respuesta", "is_correcta") %in% names(scored)))
+  expect_false(any(is.na(scored$Forma)))
+  expect_false(any(is.na(scored$Origen)))
+
+  # Y sirve para volver a calcular
+  expect_no_error(calculate_student_scores(scored))
+})
+
+test_that("responses_to_scored falla si la corrida no tiene respuestas", {
+  expect_error(responses_to_scored(empty_responses()), "no tiene respuestas")
+})
+
 test_that("normalize_responses funciona sin corrida asociada", {
   resp <- normalize_responses(respuestas_falsas(), "run1")
   expect_true(all(is.na(resp$question_id)))
