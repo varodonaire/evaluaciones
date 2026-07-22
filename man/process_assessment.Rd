@@ -4,16 +4,27 @@
 \alias{process_assessment}
 \title{Procesar resultados de evaluacion}
 \usage{
-process_assessment(config)
+process_assessment(config, sink = NULL, exam_result = NULL, run_id = NULL)
 }
 \arguments{
 \item{config}{Objeto processing_config}
+
+\item{sink}{Sink de resultados donde persistir la corrida. NULL usa un sink
+local sobre `config$output_dir`, que es el comportamiento historico}
+
+\item{exam_result}{Objeto exam_result de la generacion, opcional. Sin el, la
+corrida se registra sin el detalle de formas y semillas}
+
+\item{run_id}{Identificador de la corrida. NULL genera uno}
 }
 \value{
 Lista con todos los resultados del procesamiento
 }
 \description{
-Procesar resultados de evaluacion
+Por defecto escribe los tres .xlsx de siempre en `config$output_dir`. Si se
+le pasa un `sink`, ademas registra la corrida y las respuestas, una fila por
+alumno y pregunta, con lo necesario para rehacer o mejorar el analisis mas
+adelante.
 }
 \examples{
 \dontrun{
@@ -24,5 +35,8 @@ config <- create_processing_config(
   num_questions = 25
 )
 results <- process_assessment(config)
+
+# Persistiendo la corrida en MongoDB
+process_assessment(config, sink = results_sink_mongo(), exam_result = res)
 }
 }

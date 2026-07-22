@@ -4,7 +4,17 @@
 
 #' Procesar resultados de evaluacion
 #'
+#' Por defecto escribe los tres .xlsx de siempre en `config$output_dir`. Si se
+#' le pasa un `sink`, ademas registra la corrida y las respuestas, una fila por
+#' alumno y pregunta, con lo necesario para rehacer o mejorar el analisis mas
+#' adelante.
+#'
 #' @param config Objeto processing_config
+#' @param sink Sink de resultados donde persistir la corrida. NULL usa un sink
+#'   local sobre `config$output_dir`, que es el comportamiento historico
+#' @param exam_result Objeto exam_result de la generacion, opcional. Sin el, la
+#'   corrida se registra sin el detalle de formas y semillas
+#' @param run_id Identificador de la corrida. NULL genera uno
 #'
 #' @return Lista con todos los resultados del procesamiento
 #' @export
@@ -18,9 +28,13 @@
 #'   num_questions = 25
 #' )
 #' results <- process_assessment(config)
+#'
+#' # Persistiendo la corrida en MongoDB
+#' process_assessment(config, sink = results_sink_mongo(), exam_result = res)
 #' }
-process_assessment <- function(config) {
-  
+process_assessment <- function(config, sink = NULL, exam_result = NULL,
+                               run_id = NULL) {
+
   message("\n", strrep("=", 60))
   message("PROCESAMIENTO DE EVALUACION")
   message(strrep("=", 60), "\n")
@@ -59,22 +73,34 @@ process_assessment <- function(config) {
   item_performance <- calculate_item_performance(scored, "Origen")
   topic_performance <- calculate_item_performance(scored, "Eje")
   
-  # 8. Crear directorio de salida
-  if (!dir.exists(config$output_dir)) {
-    dir.create(config$output_dir, recursive = TRUE)
-  }
-  
-  # 9. Exportar resultados
-  scores_file <- file.path(config$output_dir, "puntajes_estudiantes.xlsx")
-  items_file <- file.path(config$output_dir, "rendimiento_items.xlsx")
-  topics_file <- file.path(config$output_dir, "rendimiento_ejes.xlsx")
-  
-  write_xlsx(student_scores, scores_file)
-  write_xlsx(item_performance, items_file)
-  write_xlsx(topic_performance, topics_file)
-  
+  # 8. Los .xlsx de siempre, en el directorio de salida
+  local_sink <- results_sink_local(config$output_dir)
+  write_xlsx_reports(local_sink, student_scores, item_performance, topic_performance)
   message(sprintf("[OK] Archivos exportados a %s", config$output_dir))
-  
+
+  # 9. Registrar la corrida: en el sink que se pida, o en el local por defecto
+  destino <- sink %||% local_sink
+  run <- build_run_record(
+    exam_result = exam_result,
+    processing_config = config,
+    session_id = config$session_id,
+    analysis = list(
+      n_estudiantes = nrow(student_scores),
+      n_respuestas = nrow(scored),
+      promedio = mean(student_scores$porcentaje, na.rm = TRUE)
+    )
+  )
+  if (!is.null(run_id)) {
+    run$run_id <- run_id
+  }
+
+  rs_write_run(destino, run)
+  rs_write_responses(destino, normalize_responses(scored, run$run_id,
+                                                  id_col = config$id_col,
+                                                  run = run),
+                     run$run_id)
+  message(sprintf("[OK] Corrida registrada: %s", run$run_id))
+
   # 10. Resumen
   message("\n", strrep("=", 60))
   message("[OK] PROCESAMIENTO COMPLETO")
@@ -91,6 +117,9 @@ process_assessment <- function(config) {
     item_performance = item_performance,
     topic_performance = topic_performance,
     id_col = config$id_col,
+    run_id = run$run_id,
+    run = run,
+    sink = destino,
     config = config
   ))
 }
