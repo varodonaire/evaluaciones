@@ -1,0 +1,23 @@
+<<echo=FALSE, results=hide>>=
+a <- sample(2:9, 1)
+b <- sample(2:9, 1)
+correcta <- a * b
+
+opciones <- c(correcta, correcta + 1, correcta - 1, correcta + 10)
+opciones <- sample(opciones)
+bitstring <- paste0(ifelse(opciones == correcta, 1, 0), collapse = "")
+@
+
+\begin{question}
+Cuanto es $\Sexpr{a} \cdot \Sexpr{b}$?
+
+<<echo=FALSE, results=tex>>=
+exams::answerlist(opciones, markup = "latex")
+@
+
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{Suma_2}

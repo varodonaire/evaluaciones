@@ -53,3 +53,56 @@ fake_scored <- function(n_forms = 2, n_questions = 5, n_students = 20, seed = 42
   responses <- fake_responses(items, n_students, seed = seed)
   score_responses(responses, items)
 }
+
+# ------------------------------------------------------------------
+# Generacion de examenes
+# ------------------------------------------------------------------
+
+#' Directorio con los ejercicios .Rnw de prueba
+questions_dir <- function() {
+  testthat::test_path("fixtures")
+}
+
+#' Construir un exam_result sin necesitar LaTeX
+#'
+#' Usa xexams(), el motor comun bajo todos los exams2*, en vez de exams2pdf.
+#' Produce la misma estructura que generate_exams() salvo los PDFs.
+#'
+#' @param n_forms Numero de formas
+#' @param sizes,seeds Configuracion de grupos (NULL = un grupo por defecto)
+#' @param order_seed Seed para el orden de las preguntas
+fake_exam_result <- function(n_forms = 2, sizes = NULL, seeds = NULL,
+                             order_seed = 1) {
+  qdir <- normalizePath(questions_dir())
+
+  files <- c("Suma_1.Rnw", "Suma_2.Rnw", "Resta_1.Rnw")
+  topics <- c("Suma", "Suma", "Resta")
+
+  groups <- if (is.null(sizes)) NULL else list(sizes = sizes, seeds = seeds)
+  config <- create_exam_config("test", 2025, 4, "Mat",
+                               num_forms = n_forms, groups = groups)
+  pool <- create_question_pool(files, topics, base_dir = qdir)
+  matrices <- generate_exam_matrices(config, pool, order_seed)
+
+  outdir <- tempfile("xexams")
+  dir.create(outdir)
+
+  raw <- exams::xexams(
+    matrices$question_matrix,
+    seed = matrices$seed_matrix,
+    driver = list(sweave = list(quiet = TRUE)),
+    edir = qdir,
+    dir = outdir
+  )
+
+  structure(
+    list(
+      config = config,
+      pool = pool,
+      exams_raw = raw,
+      matrices = matrices,
+      order_seed = order_seed
+    ),
+    class = c("exam_result", "list")
+  )
+}
