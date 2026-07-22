@@ -1,0 +1,78 @@
+
+
+
+<<echo=FALSE, results=hide>>=
+# -----------------------------
+# logica_6: Traducción proposicional parametrizada
+# Estructuras consideradas: ¬p→¬q, ¬q→¬p, p→q, q→p
+# -----------------------------
+
+# Helper para poner en minúscula la primera letra de una frase (mantiene acentos)
+lower_first <- function(s) {
+  if (nchar(s) == 0) return(s)
+  paste0(tolower(substr(s, 1, 1)), substr(s, 2, nchar(s)))
+}
+
+# Contextos (p, q)
+ctx <- list(
+  list(p = "Llueve",            q = "Llevo paraguas"),
+  list(p = "Estudio",           q = "Apruebo la prueba"),
+  list(p = "Tengo clase",       q = "Voy a la universidad"),
+  list(p = "Hago la tarea",     q = "Entrego a tiempo"),
+  list(p = "Prendo la calefacción", q = "La casa está tibia")
+)
+
+# Formas lógicas y cómo verbalizarlas en español
+forms <- list(
+  list(kind = "notp_implies_notq",
+       corr = "$\\lnot p \\rightarrow \\lnot q$",
+       make_sentence = function(p,q) sprintf("\\\\textbf{Si} no %s, no %s", lower_first(p), lower_first(q))),
+  list(kind = "notq_implies_notp",
+       corr = "$\\lnot q \\rightarrow \\lnot p$",
+       make_sentence = function(p,q) sprintf("\\\\textbf{Si} no %s, no %s", lower_first(q), lower_first(p))),
+  list(kind = "p_implies_q",
+       corr = "$p \\rightarrow q$",
+       make_sentence = function(p,q) sprintf("\\\\textbf{Si} %s, %s", lower_first(p), lower_first(q))),
+  list(kind = "q_implies_p",
+       corr = "$q \\rightarrow p$",
+       make_sentence = function(p,q) sprintf("\\\\textbf{Si} %s, %s", lower_first(q), lower_first(p)))
+)
+
+# Seleccionar aleatoriamente un contexto y una forma
+sel_ctx   <- sample(ctx, 1)[[1]]
+sel_form  <- sample(forms, 1)[[1]]
+
+# Construir el enunciado en lenguaje natural
+frase <- sel_form$make_sentence(sel_ctx$p, sel_ctx$q)
+
+# Banco de fórmulas candidatas (las 4 formas contempladas)
+all_forms <- c("$\\lnot p \\rightarrow \\lnot q$",
+               "$\\lnot q \\rightarrow \\lnot p$",
+               "$p \\rightarrow q$",
+               "$q \\rightarrow p$")
+
+# Correcta y distractores
+corr <- sel_form$corr
+respuestas <- c(corr, sample(setdiff(all_forms, corr), 3))
+
+# Mezclar las cuatro primeras, luego fijar "Ninguna..." al final
+ord <- sample(length(respuestas))
+respuestas <- respuestas[ord]
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# Bitstring
+bitstring <- paste0(ifelse(respuestas == corr, 1, 0), collapse = "")
+@
+
+\begin{question}
+Si $p$: \enquote{\Sexpr{sel_ctx$p}} y $q$: \enquote{\Sexpr{sel_ctx$q}}, ¿cómo se traduce lógicamente: \enquote{\Sexpr{frase}}?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{logica_6}

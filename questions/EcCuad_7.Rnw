@@ -1,0 +1,67 @@
+\begin{question}
+<<echo=FALSE, results=hide>>=
+# ------------------------------------------------------------
+# Ítem EcCuad_7 — coeficiente principal a ≠ 1 (no mónico)
+# ------------------------------------------------------------
+
+
+# Coeficiente principal (a) distinto de 1
+a <- sample(c(2, 3, 4), 1)
+
+# Raíces p y q distintas, pequeñas
+p <- sample(c(-5:-1, 1:5), 1)
+repeat {
+  q <- sample(c(-5:-1, 1:5), 1)
+  if (q != p) break
+}
+
+# Aseguramos que b ≠ 0 para que el distractor wrong_b no duplique la correcta
+while ((p + q) == 0) {
+  q <- sample(c(-5:-1, 1:5), 1)
+}
+
+# Coeficientes: a·x² – a(p+q)x + a·p·q = 0
+b <- -a * (p + q)
+c <-  a * p * q
+
+ # --- Formato factorizado: a(x - p)(x - q) ---
+factor_str <- function(r, flip = FALSE) {
+  # En factorización, (x - r). Si flip = TRUE, cambia el signo del término lineal
+  op <- if (!flip) { if (r < 0) "+ " else "- " } else { if (r < 0) "- " else "+ " }
+  paste0("(x ", op, abs(r), ")")
+}
+
+make_q <- function(A, B, C, flip_p = FALSE, flip_q = FALSE) {
+  # Ignoramos B y C para el render y usamos p, q originales con posible flip de signo en los factores
+  coefA <- if (A == 1) "" else as.character(A)
+  paste0(
+    "$", coefA, factor_str(p, flip_p), factor_str(q, flip_q), " = 0$"
+  )
+}
+
+correcta      <- make_q(a,  b,  c, FALSE, FALSE)  # a(x - p)(x - q)
+wrong_b       <- make_q(a, -b,  c, TRUE,  TRUE)   # cambia el signo de ambos términos lineales: (x + p)(x + q)
+wrong_c       <- make_q(a,  b, -c, FALSE, TRUE)   # cambia el signo de uno: (x - p)(x + q)
+monic         <- make_q(1,  b,  c, FALSE, FALSE)  # omite el coeficiente principal: (x - p)(x - q)
+
+# Vector aleatorio de respuestas + opción de descarte
+respuestas <- sample(c(correcta, wrong_b, wrong_c, monic))
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# Bitstring para exams
+bitstring <- paste0(ifelse(respuestas == correcta, 1, 0), collapse = "")
+@
+
+Una ecuación cuadrática tiene coeficiente principal \num{\Sexpr{a}} y raíces
+\(x_1 = \Sexpr{p}\) y \(x_2 = \Sexpr{q}\).  
+¿Cuál de las siguientes ecuaciones corresponde a esa cuadrática?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{EcCuad_7}

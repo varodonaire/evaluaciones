@@ -1,0 +1,56 @@
+<<echo=FALSE, results=hide>>=
+# Banco de equivalencias (expresión, equivalente correcta)
+props <- list(
+  list(expr = "$\\\\lnot (p \\\\lor q)$",
+       corr = "$\\lnot p \\land \\lnot q$"),                 # De Morgan 1
+  list(expr = "$\\\\lnot (p \\\\land q)$",
+       corr = "$\\lnot p \\lor \\lnot q$"),                  # De Morgan 2
+  list(expr = "$p \\\\rightarrow q$",
+       corr = "$\\lnot p \\lor q$"),                          # Implicación
+  list(expr = "$p \\\\leftrightarrow q$",
+       corr = "$(p \\land q) \\lor (\\lnot p \\land \\lnot q)$"),  # Bicondicional
+  list(expr = "$p \\\\rightarrow q$",
+       corr = "$\\lnot q \\rightarrow \\lnot p$")            # Contrapositiva
+)
+
+# Selección aleatoria de una proposición
+sel <- sample(props, 1)[[1]]
+
+# Distractores genéricos plausibles (no coinciden con ninguna 'corr' de arriba)
+distractores <- c(
+  "$\\lnot p \\lor \\lnot q$",
+  "$\\lnot p \\land \\lnot q$",
+  "$p \\lor q$",
+  "$p \\land q$",
+  "$p \\lor \\lnot q$",
+  "$\\lnot p \\rightarrow q$",
+  "$q \\rightarrow p$",
+  "$(p \\land \\lnot q) \\lor (\\lnot p \\land q)$"
+)
+
+# Asegurar que la correcta no se duplique dentro de los distractores
+# (por si en el banco de distractores hay una igual a 'corr')
+distractores <- setdiff(distractores, sel$corr)
+
+# Construcción de respuestas y mezcla
+respuestas <- c(sel$corr, sample(distractores, 3))
+ord <- sample(length(respuestas))
+respuestas <- respuestas[ord]
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# Bitstring
+bitstring <- paste0(ifelse(respuestas == sel$corr, 1, 0), collapse = "")
+@
+
+\begin{question}
+La proposición \Sexpr{sel$expr} es lógicamente equivalente a:
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{logica_4}

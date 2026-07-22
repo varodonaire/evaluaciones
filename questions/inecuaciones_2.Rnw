@@ -1,0 +1,64 @@
+<<echo=FALSE, results=hide>>=
+# -----------------------------
+# inecuaciones_2.Rnw
+# Presupuesto: matrícula M y x clases a p c/u, M + p x <= B
+# Respuesta: floor((B - M)/p)  (entera no negativa)
+# -----------------------------
+set.seed(sample(1:1e6, 1))
+
+p_vals <- c(1500, 1700, 1800, 2000, 2500, 3000)
+M_vals <- c(2000, 2500, 3000, 3500, 4000, 4500)
+B_vals <- seq(12000, 32000, by = 1000)
+
+valid <- FALSE
+while (!valid) {
+  p <- sample(p_vals, 1)
+  M <- sample(M_vals, 1)
+  B <- sample(B_vals, 1)
+  max_x <- floor((B - M)/p)
+  valid <- is.finite(max_x) && max_x >= 1 && max_x <= 15
+}
+
+corr_val <- max_x
+
+# Distractores plausibles: +1, -1, "ignora matrícula", techo
+distr_pool <- unique(c(
+  corr_val + 1,
+  max(corr_val - 1, 0),
+  floor(B / p),
+  ceiling((B - M) / p)
+))
+
+# Filtrar iguales al correcto y no negativos enteros
+distr_pool <- distr_pool[distr_pool != corr_val & distr_pool >= 0]
+if (length(distr_pool) < 3) {
+  extras <- setdiff(0:20, c(corr_val, distr_pool))
+  distr_pool <- c(distr_pool, sample(extras, 3 - length(distr_pool)))
+}
+distractors <- as.character(sample(distr_pool, 3))
+
+corr_tex <- as.character(corr_val)
+
+# Construcción de alternativas
+respuestas <- c(corr_tex, distractors)
+respuestas <- sample(respuestas)
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+bitstring <- paste0(ifelse(respuestas == corr_tex, 1, 0), collapse = "")
+@
+
+\begin{question}
+Una persona dispone de un presupuesto máximo de \(\$\num{\Sexpr{B}}\) para pagar una matrícula
+de \(\$\num{\Sexpr{M}}\) y \(x\) clases adicionales a \(\$\num{\Sexpr{p}}\) cada una.
+¿Cuál es la \textbf{mayor} cantidad de clases que puede comprar sin exceder su presupuesto?
+
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{inecuaciones_2}

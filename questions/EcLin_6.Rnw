@@ -1,0 +1,78 @@
+<<echo=FALSE, results=hide>>=
+# ------------------------------------------------------------
+# Ítem EcLin_6_plus — ecuación lineal con x en ambos lados y paréntesis
+# ------------------------------------------------------------
+
+
+repeat {
+  # Parámetros
+  a <- sample(2:6, 1)
+  c <- sample(2:6, 1)
+  if (a == c) next                      # evitamos denominador 0
+  r <- sample(c(-5:-1, 1:5), 1)
+  s <- sample(c(-5:-1, 1:5), 1)
+  b <- sample(c(-10:-1, 1:10), 1)
+  x0 <- sample(c(-5:-1, 1:5), 1)
+
+  # Diseñamos d para que la solución sea exactamente x0
+  # Ecuación: a(x+r) + b = c(x - s) + d
+  # Expande: (a - c)x = -ar - b - cs + d
+  # => d = (a - c)x0 + ar + b + cs
+  d <- (a - c) * x0 + a * r + b + c * s
+
+  # Correcta
+  correcta <- paste0("$x = ", x0, "$")
+
+  # Errores diagnósticos
+  # 1) Error de signo al mover términos (numerador con signo invertido)
+  num_correcto <- (-a * r - b - c * s + d)
+  den_correcto <- (a - c)
+  x_L1 <- (a * r + b + c * s - d) / den_correcto
+  wrong_sign <- paste0("$x = \\num{", x_L1, "}$")
+
+  # 2) Divide por 'a' (olvida que el coeficiente final es a-c)
+  x_div_a <- num_correcto / a
+  wrong_div_a <- paste0("$x = \\num{", x_div_a, "}$")
+
+  # 3) Omite el término b (lo borra al pasar de lado)
+  x_no_b <- (-a * r - c * s + d) / den_correcto
+  wrong_no_b <- paste0("$x = \\num{", x_no_b, "}$")
+
+  # 4) Desplazamiento +1 "de cabeza" (error aritmético final)
+  wrong_plus <- paste0("$x = \\num{", x0 + 1, "}$")
+
+  # Usaremos 4 opciones numéricas: 1 correcta + 3 distractores
+  opciones <- c(correcta, wrong_sign, wrong_div_a, wrong_no_b)
+
+  # Nos aseguramos que todas sean diferentes (como strings)
+  if (length(unique(opciones)) == length(opciones)) {
+    respuestas <- sample(opciones)
+    respuestas <- c(respuestas, "Ninguna de las anteriores.")  # Añadimos la opción de "Ninguna"
+    bitstring <- paste0(ifelse(respuestas == correcta, 1, 0), collapse = "")
+
+  # Construimos strings LaTeX bien formateados para signos
+  xr_str <- if (r >= 0) paste0("(x + ", r, ")") else paste0("(x - ", abs(r), ")")
+  xs_str <- if (s >= 0) paste0("(x - ", s, ")") else paste0("(x + ", abs(s), ")")
+  b_str  <- if (b >= 0) paste0(" + ", b) else paste0(" - ", abs(b))
+  d_str  <- if (d >= 0) paste0(" + ", d) else paste0(" - ", abs(d))
+    break
+  }
+}
+@
+\begin{question}
+Resuelve la ecuación lineal
+\[
+ \num{\Sexpr{a}}\Sexpr{xr_str} \Sexpr{b_str}
+ =
+ \num{\Sexpr{c}}\Sexpr{xs_str} \Sexpr{d_str}.
+\]
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{EcLin_6}

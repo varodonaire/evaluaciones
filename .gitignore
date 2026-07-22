@@ -114,3 +114,7 @@ tmp/
 
 # Log files
 *.log
+
+# Documentacion de referencia de R/exams (no se versiona)
+exams.pdf
+exams.html

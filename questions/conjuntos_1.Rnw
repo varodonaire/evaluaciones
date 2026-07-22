@@ -1,0 +1,68 @@
+<<echo=FALSE, results=hide>>=
+# Parámetros aleatorios con chequeos de consistencia
+valid <- FALSE
+while (!valid) {
+  N  <- sample(36:60, 1)                        # tamaño del curso
+  a  <- sample(12:(N-8), 1)                     # |A|
+  b  <- sample(12:(N-8), 1)                     # |B|
+
+  min_ab <- max(1, a + b - N)                   # para que |A∪B| <= N
+  max_ab <- min(a, b) - 1                       # evitar solapamiento total
+
+  if (min_ab <= max_ab) {
+    ab <- sample(min_ab:max_ab, 1)              # |A ∩ B|
+    at_least_one <- a + b - ab                  # |A ∪ B|
+    none <- N - at_least_one                    # ni A ni B
+    valid <- (none >= 1 && none <= N - 2)       # no trivial
+  }
+}
+
+# Respuesta correcta
+corr_val <- none
+
+# Candidatos a distractores (plausibles)
+cand <- unique(c(
+  N - (a + b),            # olvida sumar la intersección
+  N - (a + b - 2*ab),     # doble resta de la intersección
+  at_least_one,           # al menos uno
+  a + b - 2*ab,           # exactamente uno
+  a,                      # |A|
+  b,                      # |B|
+  ab,                     # |A ∩ B|
+  N - ab                  # complemento de la intersección
+))
+
+# Filtrar plausibles y distintos del correcto
+cand <- cand[is.finite(cand) & cand >= 0 & cand <= N & cand != corr_val]
+
+# Asegurar 3 distractores
+if (length(cand) < 3) {
+  extras <- setdiff(0:N, c(corr_val, cand))
+  cand <- c(cand, sample(extras, 3 - length(cand)))
+}
+
+distractors <- sample(cand, 3)
+
+# Construir alternativas: mezclar 4 primeras y dejar "Ninguna..." al final
+respuestas <- c(as.character(corr_val), as.character(distractors))
+ord <- sample(length(respuestas))
+respuestas <- respuestas[ord]
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+bitstring <- paste0(ifelse(respuestas == as.character(corr_val), 1, 0), collapse = "")
+@
+
+\begin{question}
+En un curso de \Sexpr{N} estudiantes, \Sexpr{a} practican fútbol, \Sexpr{b} practican básquetbol
+y \Sexpr{ab} practican ambos deportes.\\
+¿Cuántos estudiantes no practican ninguno de estos dos deportes?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{conjuntos_1}

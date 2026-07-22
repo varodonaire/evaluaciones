@@ -1,0 +1,64 @@
+<<echo=FALSE, results=hide>>=
+# ------------------------------------------------------------------
+# Sistema 2×2 con solución entera (α, β) – versión sin duplicados
+# Distractores: S1 (swap), S2 (neg both), S2a (neg x only)
+# ------------------------------------------------------------------
+
+
+repeat {
+  # ----------- Solución correcta ----------------------------------
+  alpha <- sample(3:6, 1)          # x
+  beta  <- sample(0:4, 1)          # y
+  while (alpha == beta) beta <- sample(0:4, 1)
+
+  # ----------- Coeficientes aleatorios no degenerados -------------
+  a <- sample(2:6, 1)
+  b <- sample(3:9, 1) * sample(c(-1, 1), 1)
+  d <- sample(2:10, 1) * sample(c(-1, 1), 1)
+  e <- sample(2:7, 1)
+
+  # ----------- Términos independientes ----------------------------
+  c <- alpha * a + beta * b
+  f <- alpha * d + beta * e
+
+  # ----------- Opciones de respuesta ------------------------------
+  correcta            <- paste0("\\(x = ", alpha, "\\), \\(y = ", beta, "\\)")
+  distractor_swap     <- paste0("\\(x = ", beta,  "\\), \\(y = ", alpha, "\\)")
+  distractor_both_neg <- paste0("\\(x = ", -alpha, "\\), \\(y = ", -beta, "\\)")
+  distractor_neg_x    <- paste0("\\(x = ", -alpha, "\\), \\(y = ",  beta, "\\)")
+
+  opciones_raw <- c(correcta,
+                    distractor_swap,
+                    distractor_both_neg,
+                    distractor_neg_x)
+
+  # ---------- Verificamos unicidad -------------------------------
+  if (length(unique(opciones_raw)) == 4) break
+}
+
+# ------------- Barajamos y añadimos descarte ----------------------
+respuestas <- sample(opciones_raw)
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# ------------- Bitstring para \exsolution -------------------------
+bitstring <- paste0(ifelse(respuestas == correcta, 1, 0), collapse = "")
+@
+
+\begin{question}
+Resuelve el siguiente sistema de ecuaciones:
+\begin{align*}
+    \Sexpr{a}x  \num[print-implicit-plus]{\Sexpr{b}}y &= \Sexpr{c} \\
+    \Sexpr{d}x + \Sexpr{e}y &= \Sexpr{f}
+\end{align*}
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+
+\end{question}
+
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{SistEc_3}

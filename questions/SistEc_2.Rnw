@@ -1,0 +1,60 @@
+<<echo=FALSE, results=hide>>=
+# ------------------------------------------------------------------
+# Ítem 13 – Sistema con parámetro k
+# Aseguramos que las 4 opciones sean únicas (S6, S7, S8)
+# ------------------------------------------------------------------
+
+
+repeat {
+  # ---- Parámetro aleatorio ---------------------------------------
+  a <- sample(seq(4, 10, 2), 1)           # {4,6,8,10}
+
+  # ---------- Respuesta correcta ----------------------------------
+  correcta <- 0                           # k debe ser 0
+
+  # ---------- Distractores diagnósticos ---------------------------
+  distractor_x_only   <- 2                # S6 – sustituye solo x
+  distractor_ratio    <- 4                # S7 – proporcionalidad mal usada
+  distractor_equals_a <- a                # S8 – confunde parámetro
+
+  # ------- Construimos opciones como \num{...} --------------------
+  opciones_raw <- c(correcta,
+                    distractor_x_only,
+                    distractor_ratio,
+                    distractor_equals_a)
+
+  opciones <- paste0("\\num{", opciones_raw, "}")
+
+  # Salimos si las 4 opciones son distintas
+  if (length(unique(opciones_raw)) == 4) break
+}
+
+# ---------- Barajamos y añadimos descarte -------------------------
+correct_option <- opciones[1]             # correcta es la 1ª
+respuestas <- sample(opciones)
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# ---------- Bitstring para exsolution -----------------------------
+bitstring <- paste0(ifelse(respuestas == correct_option, 1, 0), collapse = "")
+@
+
+\begin{question}
+Considera el sistema de ecuaciones
+\begin{align*}
+    x + 2y &= \Sexpr{2*a} \\
+    kx + 4y &= \Sexpr{2*a}
+\end{align*}
+
+¿Cuál debe ser el valor de \(k\) para que el sistema tenga como solución \(x = \Sexpr{a}\)?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+
+\end{question}
+
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{SistEc_2}

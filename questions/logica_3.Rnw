@@ -1,0 +1,54 @@
+# logica_3 (parametrizada con lista de proposiciones)
+
+<<echo=FALSE, results=hide>>=
+# Banco de proposiciones con su descripción correcta de tabla de verdad
+props <- list(
+  list(expr = "$p \\\\rightarrow q$",
+       corr = "Falsa solo cuando $p$ es verdadera y $q$ es falsa."),
+  list(expr = "$q \\\\rightarrow p$",
+       corr = "Falsa solo cuando $q$ es verdadera y $p$ es falsa."),
+  list(expr = "$\\\\lnot p \\\\rightarrow q$",
+       corr = "Verdadera siempre que $p$ es falsa."),
+  list(expr = "$p \\\\rightarrow \\\\lnot q$",
+       corr = "Falsa solo cuando $p$ es verdadera y $q$ es verdadera."),
+  list(expr = "$p \\\\leftrightarrow q$",
+       corr = "Verdadera cuando $p$ y $q$ tienen el mismo valor de verdad.")
+)
+
+# Selección aleatoria de una proposición
+sel <- sample(props, 1)[[1]]
+
+# Distractores genéricos (no coinciden con ninguna correcta de arriba)
+distractores <- c(
+  "Verdadera solo cuando $p$ y $q$ son verdaderas.",
+  "Verdadera siempre.",
+  "Falsa siempre.",
+  "Verdadera solo cuando $p$ es verdadera.",
+  "Verdadera solo cuando $q$ es verdadera.",
+  "Verdadera solo cuando exactamente una es verdadera.",
+  "Falsa solo cuando $p$ es falsa y $q$ es verdadera.",
+  "Falsa solo cuando $p$ es falsa y $q$ es falsa."
+)
+
+# Construcción de respuestas y mezcla (como en logica_1/logica_2)
+respuestas <- c(sel$corr, sample(distractores, 3))
+ord <- sample(length(respuestas))
+respuestas <- respuestas[ord]
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# Bitstring
+bitstring <- paste0(ifelse(respuestas == sel$corr, 1, 0), collapse = "")
+@
+
+\begin{question}
+¿Cuál de las alternativas describe correctamente la tabla de verdad de \Sexpr{sel$expr}?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{logica_3}

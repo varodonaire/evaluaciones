@@ -1,0 +1,35 @@
+<<echo=FALSE, results=hide>>=
+# Correcta y distractores para bicondicional
+corr <- "p y q tienen el mismo valor de verdad."
+
+distractores <- c(
+  "p es verdadero y q es falso.",
+  "p es falso y q es verdadero.",
+  "Siempre.",
+  "exactamente una de las proposiciones es verdadera.",
+  "p es verdadera.",
+  "q es verdadera."
+)
+
+# Construcción de respuestas y mezcla
+respuestas <- c(corr, sample(distractores, 3))
+ord <- sample(length(respuestas))
+respuestas <- respuestas[ord]
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# Bitstring
+bitstring <- paste0(ifelse(respuestas == corr, 1, 0), collapse = "")
+@
+
+\begin{question}
+La doble implicación $p \leftrightarrow q$ es verdadera cuando:
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{logica_5}

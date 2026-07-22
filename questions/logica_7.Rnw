@@ -1,0 +1,50 @@
+
+
+<<echo=FALSE, results=hide>>=
+# -----------------------------
+# logica_7: Equivalencia (distributiva / absorción / De Morgan) parametrizada
+# Construye ítems cuya forma simplificada esté en { p, q, p ∨ q, ¬p }
+# -----------------------------
+
+# Banco de pares (expresión, equivalente correcta)
+props <- list(
+  list(expr = "$(p \\\\land q) \\\\lor (p \\\\land \\\\lnot q)$",            corr = "$p$"),             # Distributiva: p∧q ∨ p∧¬q ≡ p
+  list(expr = "$(p \\\\lor q) \\\\land (p \\\\lor \\\\lnot q)$",            corr = "$p$"),             # Distributiva dual ≡ p
+  list(expr = "$(p \\\\land q) \\\\lor (\\\\lnot p \\\\land q)$",          corr = "$q$"),             # Distributiva ≡ q
+  list(expr = "$(p \\\\lor q) \\\\land (\\\\lnot p \\\\lor q)$",          corr = "$q$"),             # Distributiva dual ≡ q
+  list(expr = "$\\\\lnot(\\\\lnot p \\\\land \\\\lnot q)$",                 corr = "$p \\lor q$"),    # De Morgan ≡ p∨q
+  list(expr = "$\\\\lnot p \\\\land (\\\\lnot p \\\\lor q)$",               corr = "$\\lnot p$"),     # Absorción a ∧ (a ∨ b) ≡ a, con a=¬p
+  list(expr = "$\\\\lnot p \\\\lor (\\\\lnot p \\\\land q)$",               corr = "$\\lnot p$")      # Absorción a ∨ (a ∧ b) ≡ a, con a=¬p
+)
+
+# Selección aleatoria de una proposición
+sel <- sample(props, 1)[[1]]
+
+# Conjunto de respuestas posibles del formato de la pregunta
+opciones_pool <- c("$p$", "$q$", "$p \\lor q$", "$\\lnot p$")
+
+# Correcta (dentro del pool) y distractores (las otras 3)
+corr <- sel$corr
+respuestas <- c(corr, sample(setdiff(opciones_pool, corr), 3))
+
+# Mezclar cuatro primeras y fijar "Ninguna..." al final
+ord <- sample(length(respuestas))
+respuestas <- respuestas[ord]
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# Bitstring
+bitstring <- paste0(ifelse(respuestas == corr, 1, 0), collapse = "")
+@
+
+\begin{question}
+La proposición \Sexpr{sel$expr} es equivalente a:
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{logica_7}

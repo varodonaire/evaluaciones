@@ -1,0 +1,68 @@
+
+
+
+<<echo=FALSE, results=hide>>=
+# -----------------------------
+# logica_8: Clasificación de proposiciones (tautología, contradicción, contingencia)
+# -----------------------------
+
+# Banco de proposiciones y su clasificación
+props <- list(
+  list(expr = "$p \\leftrightarrow q$", desc = "Si $p$: 'El número es par', $q$: 'El número es divisible por 2'", corr = "Es una tautología."),
+  list(expr = "$p \\lor \\lnot p$",     desc = "Tercero excluido",                                corr = "Es una tautología."),
+  list(expr = "$p \\land \\lnot p$",    desc = "Contradicción clásica",                           corr = "Es una contradicción."),
+  list(expr = "$p \\rightarrow q$",     desc = "Proposición condicional cualquiera",               corr = "Es una contingencia."),
+  list(expr = "$p \\lor q$",            desc = "Disyunción genérica",                              corr = "Es una contingencia.")
+)
+
+# Selección aleatoria robusta (por índice)
+idx <- sample.int(length(props), size = 1)
+sel <- props[[idx]]
+
+# Categorías posibles
+categorias <- c("Es una tautología.", "Es una contradicción.", "Es una contingencia.")
+
+# Correcta y distractores (sin duplicados)
+corr <- sel$corr
+distractores <- setdiff(categorias, corr)
+respuestas <- c(corr, sample(distractores, size = 2, replace = FALSE))
+# Añadir una tercera distracción aleatoria desde las categorías (garantizando 3 en total)
+respuestas <- unique(respuestas)
+if (length(respuestas) < 3) {
+  restantes <- setdiff(categorias, respuestas)
+  if (length(restantes) > 0) respuestas <- c(respuestas, sample(restantes, size = 1))
+}
+# Asegurar 4 alternativas (si por alguna razón aún faltan, completar con categorías restantes)
+if (length(respuestas) < 3) {
+  faltan <- 3 - length(respuestas)
+  extras <- setdiff(categorias, respuestas)
+  respuestas <- c(respuestas, sample(extras, size = faltan, replace = FALSE))
+}
+
+# Si por construcción quedaron solo 3 (corr + 2), ya tenemos todas las categorías
+# No necesitamos agregar más opciones porque ya tenemos las 3 categorías posibles
+if (length(respuestas) > 3) {
+  respuestas <- respuestas[1:3]
+}
+
+# Mezclar cuatro primeras y fijar "Ninguna..." al final
+ord <- sample.int(length(respuestas), size = length(respuestas), replace = FALSE)
+respuestas <- respuestas[ord]
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# Bitstring
+bitstring <- paste0(ifelse(respuestas == corr, 1, 0), collapse = "")
+@
+
+\begin{question}
+Si $p$: "El número es par" y $q$: "El número es divisible por 2", entonces la proposición $p \leftrightarrow q$:
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{logica_8}

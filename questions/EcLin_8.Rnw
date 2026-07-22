@@ -1,0 +1,65 @@
+<<echo=FALSE, results=hide>>=
+# ------------------------------------------------------------
+# Ítem EcLin_8 — modelo lineal contextual (SÓLO modelación)
+# Genera opciones numéricas que distinguen el modelo y = m k + b
+# ------------------------------------------------------------
+
+make_options <- function() {
+  # Precio por clase (m) y matrícula fija (b)
+  m <- sample(seq(4500, 7500, 500), 1)     # 4500–7500 CLP
+  b <- sample(seq(15000, 25000, 5000), 1)  # 15k–25k CLP
+  
+  # Número de clases exactas (k) entre 5 y 9
+  k <- sample(5:9, 1)
+  
+  # Totales numéricos (todas alternativas son NÚMEROS)
+  total_correcto   <- m * k + b                 # modelo correcto y = m k + b
+  total_sin_b      <- m * k                     # ignora matrícula fija
+  total_solo_b     <- b                         # ignora pago por clase
+  total_doble_b    <- m * k + 2 * b             # doble cuenta la matrícula
+  
+  opciones_num <- c(total_correcto, total_sin_b, total_solo_b, total_doble_b)
+  
+  list(
+    m = m, b = b, k = k,
+    opciones_num = opciones_num,
+    correcta_num = total_correcto
+  )
+}
+
+# Repite hasta que no haya duplicados y todas las opciones sean positivas
+repeat {
+  opt <- make_options()
+  if (length(unique(opt$opciones_num)) == 4 && all(opt$opciones_num > 0)) break
+}
+
+# Formatea opciones en LaTeX con \num{}
+format_num <- function(x) paste0("$\\num{", x, "}$")
+
+opciones_fmt <- vapply(opt$opciones_num, format_num, character(1))
+correct_option <- format_num(opt$correcta_num)
+
+# Baraja opciones
+respuestas <- sample(opciones_fmt)
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# ---- Bitstring basado en la opción correcta -------------------
+bitstring <- paste0(ifelse(respuestas == correct_option, 1, 0), collapse = "")
+
+# Variables para el enunciado
+m     <- opt$m
+b     <- opt$b
+k     <- opt$k
+@
+\begin{question}
+Un gimnasio cobra $\num{\Sexpr{m}}$ por cada clase y una matrícula fija de $\num{\Sexpr{b}}$. 
+Si un estudiante contrata exactamente $\Sexpr{k}$ clases, ¿cuánto pagará en total?
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{EcLin_8}

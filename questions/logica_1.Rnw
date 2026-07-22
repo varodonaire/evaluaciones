@@ -1,0 +1,43 @@
+<<echo=FALSE, results=hide>>=
+# Banco de proposiciones con su alternativa correcta
+props <- list(
+  list(expr = "$p \\\\land q$", corr = "Verdadera solo si $p$ y $q$ son verdaderas."),
+  list(expr = "$p \\\\lor q$",  corr = "Verdadera si al menos una es verdadera."),
+  list(expr = "$\\\\lnot p$",    corr = "Verdadera solo si $p$ es falsa."),
+  list(expr = "$p \\\\rightarrow q$", corr = "Falsa solo cuando $p$ es verdadero y $q$ es falso.")
+)
+
+# Selección aleatoria de una proposición
+sel <- sample(props, 1)[[1]]
+
+# Distractores genéricos (nunca coinciden con las correctas)
+distractors <- c(
+  "Verdadera siempre.",
+  "Falsa siempre.",
+  "Verdadera solo si exactamente una es verdadera."
+)
+
+# Construir alternativas: correcta + distractores
+respuestas <- c(sel$corr, sample(distractors, 3))
+# shuffle the four answer choices
+ord <- sample(length(respuestas))
+respuestas <- respuestas[ord]
+
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+bitstring <- paste0(ifelse(respuestas == sel$corr, 1, 0), collapse = "")
+
+@
+\begin{question}
+¿Cuál es la tabla de verdad de la proposición \Sexpr{sel$expr}?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{logica_1}

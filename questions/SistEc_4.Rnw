@@ -1,0 +1,62 @@
+<<echo=FALSE, results=hide>>=
+# ------------------------------------------------------------
+# Ítem SistEc_4 — Bug S4 (|A|=0 pero sistema inconsistente)
+# ------------------------------------------------------------
+
+
+# Primera ecuación
+a1 <- sample(2:6, 1)
+b1 <- sample(2:6, 1)
+c1 <- sample(5:15, 1)
+
+# Factor k para hacer filas proporcionales
+k  <- sample(2:4, 1)
+a2 <- k * a1
+b2 <- k * b1
+
+# Elegimos c2 ≠ k*c1 para inconsistencia
+repeat {
+  c2 <- sample(5:15, 1)
+  if (c2 != k * c1) break
+}
+
+# --------- Respuesta correcta ----------
+correcta <- "Ninguna solución."
+
+# --------- Distractores ----------
+distractor_inf   <- "No se puede determinar con la información dada."   # Distractor evasivo para nivel básico
+distractor_uniq  <- "Una única solución."
+distractor_dep   <- "Depende de los valores de $x$ e $y$."
+
+# Vector barajado + descarte
+respuestas <- sample(c(
+  correcta,
+  distractor_inf,
+  distractor_uniq,
+  distractor_dep
+))
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# Bitstring para exams
+bitstring <- paste0(ifelse(respuestas == correcta, 1, 0), collapse = "")
+@
+
+\begin{question}
+Considere el sistema lineal
+
+\begin{align*}
+\Sexpr{a1}x + \Sexpr{b1}y &= \Sexpr{c1}\\
+\Sexpr{a2}x + \Sexpr{b2}y &= \Sexpr{c2}.
+\end{align*}
+
+¿Cuántas soluciones tiene?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{SistEc_4}

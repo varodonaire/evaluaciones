@@ -1,0 +1,58 @@
+<<echo=FALSE, results=hide>>=
+# ------------------------------------------------------------------
+# Ítem 8 – Estacionamiento rectangular
+# Asegura 4 opciones distintas y crea bitstring coherente
+# ------------------------------------------------------------------
+
+
+repeat {
+  # ------------------ Parámetros aleatorios -----------------------
+  ancho      <- sample(5:12, 1)            # respuesta correcta
+  diferencia <- sample(4:9, 1)             # largo = ancho + diferencia
+  largo      <- ancho + diferencia
+  area       <- ancho * largo
+
+  # ------------------ Opción correcta ----------------------------
+  correcta <- paste0("\\qty{", ancho, "}{m}.")
+
+  # ------------------ Distractores diagnósticos ------------------
+  distractor_length <- paste0("\\qty{", largo, "}{m}.")                 # confunde largo
+  distractor_mult   <- paste0("\\qty{", round(sqrt(area / diferencia), 2), "}{m}.") # mal interpreta "mayor que"
+  distractor_sub    <- paste0("\\qty{", max(ancho - diferencia, 1), "}{m}.")        # resta diferencia
+
+  opciones_tex <- c(correcta,
+                    distractor_length,
+                    distractor_mult,
+                    distractor_sub)
+
+  # ---- Verificamos que los valores numéricos sean distintos -------
+  opciones_num <- c(ancho,
+                    largo,
+                    round(sqrt(area / diferencia), 2),
+                    max(ancho - diferencia, 1))
+
+  if (length(unique(opciones_num)) == 4) break
+}
+
+# ------------------- Barajar y añadir descarte --------------------
+respuestas <- sample(opciones_tex)
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# ------------------- Bitstring para \exsolution ------------------
+bitstring <- paste0(ifelse(respuestas == correcta, 1, 0), collapse = "")
+@
+
+\begin{question}
+El largo de un estacionamiento rectangular es \qty{\Sexpr{diferencia}}{m} mayor que su ancho. Si su área es \qty{\Sexpr{area}}{m^2}, ¿cuánto mide el ancho?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+
+\end{question}
+
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{EcCuad_1}

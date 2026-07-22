@@ -1,0 +1,52 @@
+<<echo=FALSE, results=hide>>=
+# -----------------------------
+# cuantificadores_2.Rnw
+# Negación de una proposición cuantificada con implicación
+# -----------------------------
+set.seed(sample(1:1e6, 1))
+
+# Umbral de nota (entero y simple)
+t <- sample(4:7, 1)
+
+# Predicados:
+# E(x): "x entregó la tarea a tiempo"
+# N_t(x): "x obtuvo nota >= t"
+# Proposición original: ∀x (E(x) → N_t(x))
+# Negación correcta: ∃x (E(x) ∧ ¬N_t(x))
+
+corr_tex <- paste0("\\(\\exists x\\,(E(x)\\land\\neg N_{", t, "}(x))\\)")
+
+# Distractores plausibles
+distr_pool <- c(
+  paste0("\\(\\forall x\\,(E(x)\\land\\neg N_{", t, "}(x))\\)"), # cuantificador fuerte
+  paste0("\\(\\exists x\\,(\\neg E(x)\\land\\neg N_{", t, "}(x))\\)"), # niega E en vez de la implicación
+  paste0("\\(\\forall x\\,(E(x)\\to\\neg N_{", t, "}(x))\\)") # cambia conclusión
+)
+
+# Construcción de alternativas
+respuestas <- c(corr_tex, sample(distr_pool, 3))
+ord <- sample(4)
+respuestas <- respuestas[ord]
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+bitstring <- paste0(ifelse(respuestas == corr_tex, 1, 0), collapse = "")
+@
+
+\begin{question}
+Sea \(E(x)\) la proposición "\(x\) entregó la tarea a tiempo" y \(N_{\Sexpr{t}}(x)\) la proposición
+"\(x\) obtuvo una nota mayor o igual a \(\Sexpr{t}\)".\\
+Considera la afirmación:
+\[
+\forall x\,(E(x)\to N_{\Sexpr{t}}(x)).
+\]
+¿Cuál es su \textbf{negación lógica correcta}?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{cuantificadores_2}

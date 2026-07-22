@@ -1,0 +1,60 @@
+<<echo=FALSE, results=hide>>=
+# ------------------------------------------------------------------
+# Ítem 9 – Tarifa de taxi lineal  P = m d + b
+# Diagnóstico: hallar d a partir de P, con bugs M3–M5.
+# ------------------------------------------------------------------
+bajada    <- sample(seq(400, 600, 50), 1)     # tarifa base b
+pendiente <- sample(seq(140, 190), 1)         # tarifa por km   m
+
+km_real   <- sample(seq(10, 25, 3), 1)        # distancia correcta
+pago_real <- bajada + pendiente * km_real     # pago mostrado al alumno
+
+# ---------- Respuesta correcta ----------
+correcta <- paste0("\\qty{", km_real, "}{km}.")
+
+# ---------- Distractores diagnósticos ----------
+# M3 – Resta la bajada pero **no** divide:  d = P − b
+distractor_sub_only <- pago_real - bajada
+
+# M4 – Divide P entre m pero **no** resta la bajada
+distractor_no_sub   <- round(pago_real / pendiente, 0)
+
+# M5 – Mezcla ambos errores: (P + b) / m
+distractor_add_then_div <- round((pago_real + bajada) / pendiente, 0)
+
+# Formateamos con \qty{•}{km}
+distractor_sub_only      <- paste0("\\qty{", distractor_sub_only, "}{km}.")
+distractor_no_sub        <- paste0("\\qty{", distractor_no_sub, "}{km}.")
+distractor_add_then_div  <- paste0("\\qty{", distractor_add_then_div, "}{km}.")
+
+# ------------------------------------------------------------------
+# Vector de alternativas barajado
+respuestas <- sample(c(
+  correcta,
+  distractor_sub_only,
+  distractor_no_sub,
+  distractor_add_then_div
+))
+
+# Opción de descarte
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# Bitstring para \exsolution
+bitstring <- paste0(ifelse(respuestas == correcta, 1, 0), collapse = "")
+ 
+@
+
+\begin{question}
+Un taxista cobra \$\num{\Sexpr{bajada}} por comenzar el viaje y \$\num{\Sexpr{pendiente}} por kilómetro recorrido, por lo que el pago de un pasajero está dado por la expresión \(P=\num{\Sexpr{pendiente}}d + \num{\Sexpr{bajada}}\), donde \(P\) es el pago total y \(d\) es la distancia recorrida. Si un pasajero pagó \$\num{\Sexpr{pago_real}}, ¿qué distancia recorrió?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+
+\end{question}
+
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{EcLin_2}

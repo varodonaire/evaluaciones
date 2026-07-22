@@ -1,0 +1,65 @@
+\begin{question}
+<<echo=FALSE, results=hide>>=
+# ------------------------------------------------------------
+# Ítem EcCuad_6 — raíces dobles (Δ = 0) • asegura opciones únicas
+# ------------------------------------------------------------
+
+
+make_q <- function(b, c) {
+  paste0(
+    "$x^{2} ",
+    ifelse(b < 0, "- ", "+ "), abs(b), "x ",
+    ifelse(c < 0, "- ", "+ "), abs(c), " = 0$"
+  )
+}
+
+repeat {
+  root <- sample(c(-5:-1, 1:5), 1)    # raíz (≠0)
+
+  b <- -2 * root
+  c <-  root^2
+
+  correcta           <- make_q(b,  c)
+  distractor_wrong_b <- make_q(-b, c)     # signo de b mal
+  distractor_wrong_c <- make_q(b, -c)     # signo de c mal
+
+  # Variante extra: elige la opción con ambos coeficientes positivos o negativos
+  distractor_pos <- make_q(abs(b), abs(c))     # ambos positivos
+  distractor_neg <- make_q(-abs(b), -abs(c))   # ambos negativos
+
+  # Escoge la primera que no duplique a otras
+  distractor_abs <- if (!distractor_pos %in% c(correcta,
+                                               distractor_wrong_b,
+                                               distractor_wrong_c))
+                      distractor_pos
+                    else
+                      distractor_neg
+
+  respuestas <- c(correcta,
+                  distractor_wrong_b,
+                  distractor_wrong_c,
+                  distractor_abs)
+
+  # Salir del bucle sólo si las 4 son distintas
+  if (length(unique(respuestas)) == 4) break
+}
+
+# Barajar + opción de descarte
+respuestas <- sample(respuestas)
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# Bitstring
+bitstring <- paste0(ifelse(respuestas == correcta, 1, 0), collapse = "")
+@
+Una ecuación cuadrática tiene una única solución real \(x_1\).
+Si \(x_1 = \Sexpr{root}\), ¿cuál de las siguientes ecuaciones corresponde a esa cuadrática?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{EcCuad_6}

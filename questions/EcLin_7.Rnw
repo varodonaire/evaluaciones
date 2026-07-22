@@ -1,0 +1,50 @@
+\begin{question}
+<<echo=FALSE, results=hide>>=
+# ------------------------------------------------------------
+# Ítem EcLin_7 — coeficiente de x igual a 0  (bug L2)
+# ------------------------------------------------------------
+
+
+# Elegimos caso inconsistente: 0·x + b = c   con b ≠ c
+b <- sample(1:10, 1)          # término independiente 1–10
+repeat {
+  c <- sample(1:10, 1)        # c distinto de b
+  if (c != b) break
+}
+
+# --------- Respuesta correcta ----------
+correcta <- paste0("$x = ", (c - b), "$.")
+
+# --------- Distractores -----------------
+wrong_inf   <- "Infinitas soluciones."        # cree 0x = 0
+wrong_value <-  "Ninguna solución." # despeja como si coef. fuera 1
+wrong_zero  <- "$x = 0$."                     # asume x = 0 siempre
+
+# Vector barajado + descarte
+respuestas <- sample(c(
+  correcta,
+  wrong_inf,
+  wrong_value,
+  wrong_zero
+))
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# Bitstring
+bitstring <- paste0(ifelse(respuestas == correcta, 1, 0), collapse = "")
+@
+
+Considere la ecuación lineal
+\[
+x + \num{\Sexpr{b}} = \num{\Sexpr{c}}.
+\]
+¿Cuántas soluciones tiene?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{EcLin_7}

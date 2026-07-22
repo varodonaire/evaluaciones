@@ -1,0 +1,68 @@
+<<echo=FALSE, results=hide>>=
+# ---------------------------------------------------------------
+# Ítem 7 — Grado de un polinomio dado por factores
+# Pregunta: cuál es el grado de P(x) = (x - a)^p (x + b)^q ?
+# Se generan 4 opciones numéricas (1 correcta + 3 distractores) y
+# la opción "Ninguna de las anteriores.".
+# ---------------------------------------------------------------
+
+# Parámetros: constantes pequeñas para mantener números manejables
+a <- sample(1:5, 1)
+b <- sample(1:5, 1)
+
+# Exponentes (elige una pareja tipo 2 y 3 o similares)
+p <- sample(c(2,3), 1)
+q <- sample(c(2,3), 1)
+
+# Construimos la representación LaTeX del polinomio
+poly_plain <- paste0("(x - ", a, ")^{", p, "}(x + ", b, ")^{", q, "}")
+
+# Respuesta correcta: grado = p + q
+grado_correcto <- p + q
+correcta <- paste0("\\num{", grado_correcto, "}")
+
+# Distractores diagnósticos
+# D1: producto de exponentes (confunde suma con producto)
+d1 <- p * q
+distractor_prod <- paste0("\\num{", d1, "}")
+
+# D2: máximo de los exponentes (confunde grado con mayor exponente)
+d2 <- max(p, q)
+distractor_max <- paste0("\\num{", d2, "}")
+
+# D3: suma menos uno (olvida contar uno de los exponentes)
+d3 <- p + q - 1
+distractor_minus1 <- paste0("\\num{", d3, "}")
+
+# Garantizamos unicidad y barajamos
+opciones <- c(correcta, distractor_prod, distractor_max, distractor_minus1)
+if (length(unique(opciones)) < 4) {
+  # En caso improbable de colisión, ajustar distractores (incrementar uno)
+  opciones <- unique(opciones)
+  while (length(opciones) < 4) {
+    opciones <- c(opciones, paste0("\\num{", sample(0:8,1), "}"))
+    opciones <- unique(opciones)
+  }
+}
+
+respuestas <- sample(opciones)
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# Bitstring para \exsolution (marca la correcta entre las opciones)
+bitstring <- paste0(ifelse(respuestas == correcta, 1, 0), collapse = "")
+@
+
+\begin{question}
+¿Cuál es el grado del polinomio \(\Sexpr{poly_plain}\)?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+
+\end{question}
+
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{EcCuad_4}

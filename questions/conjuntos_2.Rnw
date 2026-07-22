@@ -1,0 +1,96 @@
+<<echo=FALSE, results=hide>>=
+# -----------------------------
+# conjuntos_2.Rnw (A ∩ B simbólico)
+# -----------------------------
+set.seed(sample(1:1e6, 1))
+
+# Universo base y tamaños (para que el ítem sea legible)
+U <- 1:18
+m_inter <- sample(2:3, 1)          # tamaño de la intersección
+m_Aonly <- sample(2:4, 1)          # elementos solo en A
+m_Bonly <- sample(2:4, 1)          # elementos solo en B
+
+# Elegir intersección
+S_inter <- sample(U, m_inter, replace = FALSE)
+
+# Excluir intersección del universo para elegir partes exclusivas
+U_rest <- setdiff(U, S_inter)
+
+# Elegir partes exclusivas
+S_Aonly <- sample(U_rest, m_Aonly, replace = FALSE)
+U_rest  <- setdiff(U_rest, S_Aonly)
+S_Bonly <- sample(U_rest, m_Bonly, replace = FALSE)
+
+A <- sort(c(S_inter, S_Aonly))
+B <- sort(c(S_inter, S_Bonly))
+
+# Función para imprimir conjuntos en LaTeX
+set_to_tex <- function(v) {
+  paste0("\\{", paste(sort(v), collapse = ",\\ "), "\\}")
+}
+
+# Respuesta correcta
+corr_set <- S_inter
+corr_tex <- set_to_tex(corr_set)
+
+# Distractores plausibles
+cand_sets <- list(
+  "A_union_B" = sort(union(A, B)),
+  "A_minus_B" = sort(setdiff(A, B)),
+  "B_minus_A" = sort(setdiff(B, A)),
+  "empty"     = integer(0)
+)
+
+# Convertir a LaTeX y filtrar cualquier coincidencia accidental
+cand_tex <- unique(vapply(cand_sets, set_to_tex, FUN.VALUE = character(1)))
+cand_tex <- cand_tex[cand_tex != corr_tex]
+
+# Asegurar 3 distractores (si por azar faltaran)
+if (length(cand_tex) < 3) {
+  # generar distractores adicionales: subsets o supersets “cercanos”
+  # Tomar 1 elemento de A∪B para variar
+  union_set <- sort(union(A, B))
+  extra1 <- setdiff(union_set, corr_set)
+  if (length(extra1) >= 1) {
+    new1 <- sort(sample(union_set, max(1, length(corr_set) - 1)))
+    cand_tex <- unique(c(cand_tex, set_to_tex(new1)))
+  }
+  if (length(union_set) >= length(corr_set) + 1) {
+    new2 <- sort(sample(union_set, length(corr_set) + 1))
+    cand_tex <- unique(c(cand_tex, set_to_tex(new2)))
+  }
+  if (!("\\{\\}" %in% cand_tex)) {
+    cand_tex <- unique(c(cand_tex, "\\{\\}"))
+  }
+  cand_tex <- cand_tex[cand_tex != corr_tex]
+}
+
+# Elegir exactamente 3 distractores
+distractors <- sample(cand_tex, 3)
+
+# Construir alternativas: mezclar 4 primeras y dejar "Ninguna..." al final
+respuestas <- c(corr_tex, distractors)
+ord <- sample(length(respuestas))
+respuestas <- respuestas[ord]
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+bitstring <- paste0(ifelse(respuestas == corr_tex, 1, 0), collapse = "")
+@
+
+\begin{question}
+Sean los conjuntos
+\[
+A = \{\Sexpr{set_to_tex(A)}\}, \qquad
+B = \{\Sexpr{set_to_tex(B)}\}.
+\]
+¿Cuál de los siguientes conjuntos corresponde a \(A \cap B\)?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{conjuntos_2}

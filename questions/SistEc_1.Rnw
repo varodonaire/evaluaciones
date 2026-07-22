@@ -1,0 +1,59 @@
+<<echo=FALSE, results=hide>>=
+# ------------------------------------------------------------------
+# Ítem 10 – Sistema autos y motos
+# Objetivo: cada distractor refleja un bug explícito (S1, S4, S5)
+# y las 4 opciones deben ser únicas.
+# ------------------------------------------------------------------
+
+
+repeat {
+  autos        <- sample(7:12, 1)                    # respuesta correcta
+  motos        <- sample(3:6, 1)
+  precio_auto  <- sample(seq(1000, 2000, 100), 1)
+  precio_moto  <- sample(seq(500, 1000, 100), 1)
+
+  vehiculos   <- autos + motos
+  recaudacion <- autos * precio_auto + motos * precio_moto
+
+  # ---------- Respuesta correcta ----------
+  correcta <- autos
+
+  # ---------- Distractores diagnósticos ----------
+  distractor_motos      <- motos                                   # S1
+  distractor_no_motos   <- round(recaudacion / precio_auto, 0)     # S4
+  distractor_half       <- floor(vehiculos / 2)                    # S5
+
+  opciones_raw <- c(correcta,
+                    distractor_motos,
+                    distractor_no_motos,
+                    distractor_half)
+
+  # Repetir si hay duplicados
+  if (length(unique(opciones_raw)) == 4) break
+}
+
+# ------- Formateamos para LaTeX ----------------------------------
+opciones <- paste0("\\num{", opciones_raw, "}")
+
+# ---------- Barajamos y añadimos descarte ------------------------
+correct_option <- opciones[1]                # la correcta es el primer elemento
+respuestas     <- sample(opciones)
+respuestas     <- c(respuestas, "Ninguna de las anteriores.")
+
+# ---------- Bitstring para \exsolution ---------------------------
+bitstring <- paste0(ifelse(respuestas == correct_option, 1, 0), collapse = "")
+@
+
+\begin{question}
+Un estacionamiento cobra \$\num{\Sexpr{precio_auto}} por cada auto y \$\num{\Sexpr{precio_moto}} por cada moto.  
+Si una tarde se recaudaron \$\num{\Sexpr{recaudacion}} con un total de \Sexpr{vehiculos} vehículos, ¿cuántos autos había?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{SistEc_1}

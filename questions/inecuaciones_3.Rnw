@@ -1,0 +1,51 @@
+<<echo=FALSE, results=hide>>=
+# -----------------------------
+# inecuaciones_3.Rnw
+# ax + b <= cx + d  con (a-c) < 0  =>  x >= r
+# -----------------------------
+set.seed(sample(1:1e6, 1))
+
+a <- sample(1:5, 1)
+c <- sample((a+1):(a+5), 1)   # asegura a < c, por tanto (a-c) < 0
+r <- sample(-6:10, 1)         # solución umbral entera y corta
+b <- sample(-10:10, 1)
+d <- b + (a - c) * r          # garantiza que el límite sea exactamente r
+
+# Respuesta correcta
+corr_tex <- paste0("\\(x \\ge ", r, "\\)")
+
+# Distractores plausibles
+distr_pool <- unique(c(
+  paste0("\\(x > ", r, "\\)"),         # confunde >= con >
+  paste0("\\(x \\le ", r, "\\)"),      # no invierte la desigualdad
+  paste0("\\(x < ", r, "\\)"),         # invierte y además estricta
+  paste0("\\(x \\ge ", r + 1, "\\)"),  # desplaza umbral
+  paste0("\\(x \\ge ", r - 1, "\\)")   # desplaza umbral
+))
+
+# Elegir 3 distractores distintos del correcto
+distractors <- sample(setdiff(distr_pool, corr_tex), 3)
+
+# Construcción de alternativas (4 mezcladas + "Ninguna...")
+respuestas <- c(corr_tex, distractors)
+respuestas <- sample(respuestas)
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+bitstring <- paste0(ifelse(respuestas == corr_tex, 1, 0), collapse = "")
+@
+
+\begin{question}
+Resuelve la inecuación:
+\[
+\Sexpr{a}x + \Sexpr{b} \le \Sexpr{c}x + \Sexpr{d}.
+\]
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{inecuaciones_3}

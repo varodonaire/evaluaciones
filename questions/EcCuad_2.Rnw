@@ -1,0 +1,35 @@
+<<echo=FALSE, results=hide>>=
+
+a <- sample(seq(4, 10, 2), 1) # Coefficient of x in the first equation
+b <- sample(1:3, 1) # Coefficient of y in the first equation
+# Solutions and answers
+correcta <- "Los puntos donde  la parábola corta el eje \\(x\\)"
+distractor1 <- "Los puntos donde  la parábola corta el eje \\(y\\)"
+distractor2 <- "Los puntos donde  la parábola tiene su vértice"
+distractor3 <- "El valor máximo y mínimo de la parábola"
+
+
+respuestas <- c(correcta, distractor1, distractor2, distractor3)
+ord <- sample(length(respuestas))
+respuestas <- respuestas[ord]
+
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+bitstring <- paste0(ifelse(respuestas == correcta, 1, 0), collapse = "")
+
+@
+
+\begin{question}
+Si una ecuación cuadrática se puede escribir como \((x-\Sexpr{a})(x-\Sexpr{b})=0\), ¿qué representan los números \(\Sexpr{min(a,b)}\) y \(\Sexpr{max(a,b)}\) en el gráfico de la parábola?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+
+\end{question}
+
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{EcCuad_2}

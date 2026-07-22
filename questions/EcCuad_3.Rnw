@@ -1,0 +1,62 @@
+<<echo=FALSE, results=hide>>=
+# ------------------------------------------------------------------
+# Ítem EcCuad_3 — ecuación a partir de dos raíces (única solución)
+# Garantizamos 4 opciones distintas
+# ------------------------------------------------------------------
+
+
+make_quad <- function(b, c) {
+  coef_x <- if (abs(b) == 1) "" else as.character(abs(b))
+  paste0(
+    "\\(x^2 ",
+    ifelse(b < 0, "- ", "+ "), coef_x, "x ",
+    ifelse(c < 0, "- ", "+ "), abs(c), " = 0\\)"
+  )
+}
+
+repeat {
+  # ------------ Selección de raíces -------------------------------
+  raiz_1 <- sample(seq(-9, -1, 1), 1)       # raíz negativa
+  raiz_2 <- sample(seq(1,  9, 1), 1)        # raíz positiva
+  if (raiz_1 + raiz_2 == 0) next            # evita b = 0 (duplicados)
+
+  # ------------ Coeficientes --------------------------------------
+  b <- -(raiz_1 + raiz_2)                   # - (suma)
+  c <- raiz_1 * raiz_2                      # producto
+
+  # ------------ Opciones de respuesta -----------------------------
+  correcta           <- make_quad(b,  c)
+  distractor_wrong_b <- make_quad(-b, c)        # signo de b mal
+  distractor_wrong_c <- make_quad(b,  -c)       # signo de c mal
+  distractor_abs     <- make_quad(abs(b), abs(c)) # ambos positivos
+
+  opciones <- c(correcta,
+                distractor_wrong_b,
+                distractor_wrong_c,
+                distractor_abs)
+
+  # Si las 4 cadenas son distintas, aceptamos
+  if (length(unique(opciones)) == 4) break
+}
+
+# ------------- Barajamos y añadimos descarte ----------------------
+respuestas <- sample(opciones)
+respuestas <- c(respuestas, "Ninguna de las anteriores.")
+
+# ------------- Bitstring para \exsolution -------------------------
+bitstring <- paste0(ifelse(respuestas == correcta, 1, 0), collapse = "")
+@
+
+\begin{question}
+Se sabe que una ecuación cuadrática tiene como raíces \num{\Sexpr{raiz_1}} y \num{\Sexpr{raiz_2}}.  
+¿Cuál de las siguientes ecuaciones corresponde a esa situación?
+
+<<echo=FALSE, results=tex>>=
+answerlist(respuestas, markup = "latex")
+@
+\end{question}
+
+%% META-INFORMATION
+%% \extype{schoice}
+%% \exsolution{\Sexpr{bitstring}}
+%% \exname{EcCuad_3}
