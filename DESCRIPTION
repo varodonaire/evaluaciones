@@ -1,13 +1,11 @@
-Package: PruebasUDD
+Package: evaluaciones
 Type: Package
 Title: Generacion y Revision de Pruebas Educativas
 Version: 0.2.0
-Author: Alvaro Mattus-Donaire <varodonaire@users.noreply.github.com>
-Maintainer: Alvaro Mattus-Donaire <varodonaire@users.noreply.github.com>
 Authors@R: c(
     person(
-      "Alvaro", "UDD",
-      email = "varodonaire@users.noreply.github.com",
+      "Alvaro", "Mattus-Donaire",
+      email = "varodonaire@me.com",
       role = c("aut", "cre")
     )
   )

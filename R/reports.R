@@ -6,7 +6,7 @@
 #' @keywords internal
 get_template_path <- function(template_name) {
  # Buscar en inst/templates si esta instalado, o en el directorio actual
- pkg_path <- system.file("templates", template_name, package = "PruebasUDD")
+ pkg_path <- system.file("templates", template_name, package = "evaluaciones")
  
  if (pkg_path == "") {
    # Buscar en directorio local (desarrollo)

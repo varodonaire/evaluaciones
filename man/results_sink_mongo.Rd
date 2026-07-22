@@ -6,7 +6,7 @@
 \usage{
 results_sink_mongo(
   url = "mongodb://localhost:27017",
-  db = "pruebasudd",
+  db = "evaluaciones",
   runs_collection = "runs",
   responses_collection = "responses"
 )

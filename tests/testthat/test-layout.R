@@ -1,5 +1,5 @@
 # Layout equivalente a la hoja que se usa hoy, con N preguntas parametrizable
-layout_udd <- function(n = 5, choices = c("a", "b", "c", "d", "e")) {
+layout_estandar <- function(n = 5, choices = c("a", "b", "c", "d", "e")) {
   answer_sheet_layout(
     n_questions = n,
     choices = choices,
@@ -33,7 +33,7 @@ datos_lector <- function(n_alumnos = 3, n_preguntas = 5, verificadores = NULL) {
 # ------------------------------------------------------------------
 
 test_that("answer_sheet_layout arma un contrato valido", {
-  l <- layout_udd(n = 25)
+  l <- layout_estandar(n = 25)
 
   expect_s3_class(l, "answer_sheet_layout")
   expect_equal(l$n_questions, 25L)
@@ -46,7 +46,7 @@ test_that("answer_sheet_layout arma un contrato valido", {
 # a partir de ahi.
 test_that("el layout admite cualquier numero de preguntas", {
   for (n in c(1, 5, 25, 40, 120)) {
-    l <- layout_udd(n = n)
+    l <- layout_estandar(n = n)
     expect_equal(l$n_questions, as.integer(n))
     expect_length(l$choices, n)
     expect_equal(layout_choices(l, n), c("a", "b", "c", "d", "e"))
@@ -54,8 +54,8 @@ test_that("el layout admite cualquier numero de preguntas", {
 })
 
 test_that("n_questions tiene que ser un entero positivo", {
-  expect_error(layout_udd(n = 0), "entero positivo")
-  expect_error(layout_udd(n = -3), "entero positivo")
+  expect_error(layout_estandar(n = 0), "entero positivo")
+  expect_error(layout_estandar(n = -3), "entero positivo")
 })
 
 test_that("cada pregunta puede tener sus propias alternativas", {
@@ -93,7 +93,7 @@ test_that("las alternativas por pregunta deben cubrir todas las preguntas", {
 })
 
 test_that("layout_choices rechaza preguntas fuera de rango", {
-  l <- layout_udd(n = 5)
+  l <- layout_estandar(n = 5)
   expect_error(layout_choices(l, 6), "fuera del rango")
   expect_error(layout_choices(l, 0), "fuera del rango")
 })
@@ -144,8 +144,8 @@ test_that("sheet_field rechaza roles y tipos desconocidos", {
 })
 
 test_that("print muestra el contrato", {
-  expect_output(print(layout_udd(n = 25)), "HOJA DE RESPUESTA")
-  expect_output(print(layout_udd(n = 25)), "25")
+  expect_output(print(layout_estandar(n = 25)), "HOJA DE RESPUESTA")
+  expect_output(print(layout_estandar(n = 25)), "25")
 })
 
 # ------------------------------------------------------------------
@@ -153,7 +153,7 @@ test_that("print muestra el contrato", {
 # ------------------------------------------------------------------
 
 test_that("un layout sobrevive el viaje de ida y vuelta a JSON", {
-  original <- layout_udd(n = 25)
+  original <- layout_estandar(n = 25)
   copia <- layout_from_json(layout_to_json(original))
 
   expect_equal(layout_to_json(copia), layout_to_json(original))
@@ -180,7 +180,7 @@ test_that("las alternativas por pregunta sobreviven al JSON", {
 
 test_that("layout_to_json puede escribir a un archivo", {
   f <- withr::local_tempfile(fileext = ".json")
-  layout_to_json(layout_udd(n = 10), f)
+  layout_to_json(layout_estandar(n = 10), f)
 
   expect_true(file.exists(f))
   expect_equal(layout_from_json(f)$n_questions, 10L)
@@ -191,7 +191,7 @@ test_that("layout_to_json puede escribir a un archivo", {
 # ------------------------------------------------------------------
 
 test_that("sheet_read produce la tabla que espera score_responses", {
-  datos <- sheet_read(layout_udd(n = 5), datos_lector(3, 5))
+  datos <- sheet_read(layout_estandar(n = 5), datos_lector(3, 5))
 
   expect_setequal(names(datos), c("student_id", "Forma", "Pregunta", "Respuesta"))
   expect_equal(nrow(datos), 15)
@@ -200,48 +200,48 @@ test_that("sheet_read produce la tabla que espera score_responses", {
 })
 
 test_that("el identificador se compone de los campos en el orden declarado", {
-  datos <- sheet_read(layout_udd(n = 2), datos_lector(1, 2, verificadores = 7))
+  datos <- sheet_read(layout_estandar(n = 2), datos_lector(1, 2, verificadores = 7))
   expect_equal(unique(datos$student_id), "000000017")
 })
 
 # El verificador 10 representa la K del RUT chileno. Se resuelve con value_map,
 # de forma declarativa, en vez de con codigo especial para Chile.
 test_that("value_map traduce el verificador 10 a K", {
-  datos <- sheet_read(layout_udd(n = 2), datos_lector(2, 2, verificadores = c(10, 3)))
+  datos <- sheet_read(layout_estandar(n = 2), datos_lector(2, 2, verificadores = c(10, 3)))
   expect_setequal(unique(datos$student_id), c("00000001K", "000000023"))
 })
 
 test_that("la forma se normaliza a minusculas", {
-  datos <- sheet_read(layout_udd(n = 2), datos_lector(2, 2))
+  datos <- sheet_read(layout_estandar(n = 2), datos_lector(2, 2))
   expect_setequal(unique(datos$Forma), c("a", "b"))
 })
 
 # Es el error que hoy pasa desapercibido: la hoja impresa y el archivo leido
 # tienen que declarar el mismo numero de preguntas.
 test_that("sheet_read detecta que el archivo no calza con el layout", {
-  expect_error(sheet_read(layout_udd(n = 25), datos_lector(3, 30)),
+  expect_error(sheet_read(layout_estandar(n = 25), datos_lector(3, 30)),
                "declara 25 preguntas pero el archivo trae 30")
-  expect_error(sheet_read(layout_udd(n = 25), datos_lector(3, 20)),
+  expect_error(sheet_read(layout_estandar(n = 25), datos_lector(3, 20)),
                "declara 25 preguntas pero el archivo trae 20")
 })
 
 test_that("sheet_read falla si no encuentra las columnas de respuesta", {
   d <- datos_lector(2, 3)
   names(d) <- sub("^Respuestas", "Otra", names(d))
-  expect_error(sheet_read(layout_udd(n = 3), d), "Ninguna columna coincide")
+  expect_error(sheet_read(layout_estandar(n = 3), d), "Ninguna columna coincide")
 })
 
 test_that("sheet_read falla nombrando el campo que no encuentra", {
   d <- datos_lector(2, 3)
   d[["Forma-0"]] <- NULL
-  expect_error(sheet_read(layout_udd(n = 3), d), "forma")
+  expect_error(sheet_read(layout_estandar(n = 3), d), "forma")
 })
 
 test_that("sheet_read avisa de respuestas fuera de las alternativas", {
   d <- datos_lector(1, 3)
   d[["Respuestas-2"]] <- "z"
 
-  expect_warning(sheet_read(layout_udd(n = 3), d), "fuera de las alternativas")
+  expect_warning(sheet_read(layout_estandar(n = 3), d), "fuera de las alternativas")
 })
 
 test_that("las omisiones no cuentan como respuesta invalida", {
@@ -249,12 +249,12 @@ test_that("las omisiones no cuentan como respuesta invalida", {
   d[["Respuestas-2"]] <- NA
   d[["Respuestas-3"]] <- ""
 
-  expect_no_warning(datos <- sheet_read(layout_udd(n = 3), d))
+  expect_no_warning(datos <- sheet_read(layout_estandar(n = 3), d))
   expect_true(any(is.na(datos$Respuesta) | !nzchar(datos$Respuesta)))
 })
 
 test_that("sheet_read rechaza un tipo de lector no implementado", {
-  l <- layout_udd(n = 3)
+  l <- layout_estandar(n = 3)
   l$reader$type <- "omr"
   expect_error(sheet_read(l, datos_lector(1, 3)), "No hay lector implementado")
 })
@@ -268,7 +268,7 @@ test_that("sheet_read rechaza un tipo de lector no implementado", {
 test_that("el contrato produce el mismo identificador que normalize_rut_columns", {
   d <- datos_lector(4, 3, verificadores = c(10, 5, 10, 1))
 
-  por_contrato <- sort(unique(sheet_read(layout_udd(n = 3), d)$student_id))
+  por_contrato <- sort(unique(sheet_read(layout_estandar(n = 3), d)$student_id))
   por_convencion <- sort(normalize_rut_columns(d)$Rut)
 
   expect_equal(por_contrato, por_convencion)
@@ -279,7 +279,7 @@ test_that("el contrato produce las mismas respuestas que el camino historico", {
   d <- datos_lector(3, 4)
   for (q in 1:4) d[[paste0("Respuestas-", q)]] <- sample(letters[1:4], 3, TRUE)
 
-  por_contrato <- sheet_read(layout_udd(n = 4), d) %>%
+  por_contrato <- sheet_read(layout_estandar(n = 4), d) %>%
     dplyr::arrange(.data$student_id, .data$Pregunta)
 
   por_convencion <- d %>%
@@ -298,10 +298,10 @@ test_that("el contrato produce las mismas respuestas que el camino historico", {
 
 test_that("create_processing_config toma num_questions del layout", {
   cfg <- create_processing_config("r.xlsx", "i.json", "e.csv",
-                                  num_questions = 99, layout = layout_udd(n = 12))
+                                  num_questions = 99, layout = layout_estandar(n = 12))
 
   expect_equal(cfg$num_questions, 12L)
-  expect_equal(cfg$layout$layout_id, layout_udd(n = 12)$layout_id)
+  expect_equal(cfg$layout$layout_id, layout_estandar(n = 12)$layout_id)
 })
 
 test_that("sin layout la configuracion se comporta como antes", {
@@ -314,7 +314,7 @@ test_that("sin layout la configuracion se comporta como antes", {
 test_that("print.processing_config informa si hay layout", {
   expect_output(print(create_processing_config("r", "i", "e")), "por convencion")
   expect_output(
-    print(create_processing_config("r", "i", "e", layout = layout_udd(n = 5))),
+    print(create_processing_config("r", "i", "e", layout = layout_estandar(n = 5))),
     "layout-5p"
   )
 })

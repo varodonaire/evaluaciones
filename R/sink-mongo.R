@@ -27,7 +27,7 @@
 #' rs_list_runs(sink)
 #' }
 results_sink_mongo <- function(url = "mongodb://localhost:27017",
-                               db = "pruebasudd",
+                               db = "evaluaciones",
                                runs_collection = "runs",
                                responses_collection = "responses") {
   if (!requireNamespace("mongolite", quietly = TRUE)) {

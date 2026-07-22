@@ -6,9 +6,9 @@ skip_sin_mongo <- function() {
 # Cada test usa su propia coleccion, para que puedan correr en cualquier orden
 store_mongo_temporal <- function(env = parent.frame()) {
   col <- paste0("test_", paste(sample(letters, 10, replace = TRUE), collapse = ""))
-  store <- question_store_mongo(db = "pruebasudd_test", collection = col)
+  store <- question_store_mongo(db = "evaluaciones_test", collection = col)
   withr::defer({
-    con <- mongolite::mongo(col, "pruebasudd_test")
+    con <- mongolite::mongo(col, "evaluaciones_test")
     try(con$drop(), silent = TRUE)
   }, envir = env)
   store

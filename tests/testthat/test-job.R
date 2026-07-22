@@ -54,7 +54,7 @@ test_that("store_from_spec aplica los valores por defecto", {
 
   skip_if_not_installed("mongolite")
   m <- store_from_spec(list(type = "mongo"))
-  expect_equal(m$db, "pruebasudd")
+  expect_equal(m$db, "evaluaciones")
   expect_equal(m$collection, "questions")
 })
 
@@ -233,11 +233,11 @@ test_that("los trabajos funcionan contra mongo igual que contra local", {
 
   sufijo <- paste(sample(letters, 10, replace = TRUE), collapse = "")
   coleccion <- paste0("q_", sufijo)
-  withr::defer(try(mongolite::mongo(coleccion, "pruebasudd_test")$drop(),
+  withr::defer(try(mongolite::mongo(coleccion, "evaluaciones_test")$drop(),
                    silent = TRUE))
 
   origen <- store_local_sembrado()
-  mongo_spec <- list(type = "mongo", db = "pruebasudd_test",
+  mongo_spec <- list(type = "mongo", db = "evaluaciones_test",
                      collection = coleccion)
 
   migrado <- suppressMessages(run_job(list(

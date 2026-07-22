@@ -1,8 +1,8 @@
 # ==============================================================================
-# EJEMPLO DE USO DEL PAQUETE PruebasUDD
+# EJEMPLO DE USO DEL PAQUETE evaluaciones
 # ==============================================================================
 
-library(PruebasUDD)
+library(evaluaciones)
 
 # ==============================================================================
 # PARTE 1: GENERACIÓN DE EXÁMENES

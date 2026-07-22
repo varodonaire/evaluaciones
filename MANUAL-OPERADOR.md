@@ -31,7 +31,7 @@ después.
 Abre la aplicación **Terminal** y comprueba que el sistema responde:
 
 ```bash
-pruebasudd --help
+evaluaciones --help
 ```
 
 Debe aparecer una lista de acciones. Si dice "command not found", ve a
@@ -78,7 +78,7 @@ mayúscula si corresponde.
 Antes de armar nada, mira qué tienes:
 
 ```bash
-pruebasudd search-questions --store.type local --store.base_dir preguntas
+evaluaciones search-questions --store.type local --store.base_dir preguntas
 ```
 
 Responde algo así:
@@ -104,7 +104,7 @@ Fíjate en dos cosas:
 Para ver solo un eje:
 
 ```bash
-pruebasudd search-questions --store.type local --store.base_dir preguntas \
+evaluaciones search-questions --store.type local --store.base_dir preguntas \
   --filters.section logica
 ```
 
@@ -144,7 +144,7 @@ Qué significa cada cosa:
 Y ejecuta:
 
 ```bash
-pruebasudd --spec prueba.json
+evaluaciones --spec prueba.json
 ```
 
 ### Qué significa `groups`
@@ -212,7 +212,7 @@ Crea `correccion.json`:
 trae el Excel.
 
 ```bash
-pruebasudd --spec correccion.json
+evaluaciones --spec correccion.json
 ```
 
 Respuesta:
@@ -271,7 +271,7 @@ nombres internos son los `section` que viste en el paso 1. Si omites el bloque,
 los informes muestran el nombre interno tal cual.
 
 ```bash
-pruebasudd --spec informes.json
+evaluaciones --spec informes.json
 ```
 
 Tarda: es un PDF por estudiante. Al terminar:
@@ -321,7 +321,7 @@ en vez de darte una prueba distinta a la que rindieron.
 ### "¿Qué pruebas hemos hecho?"
 
 ```bash
-pruebasudd list-runs --sink.type local --sink.dir datos
+evaluaciones list-runs --sink.type local --sink.dir datos
 ```
 
 ### "Necesito los informes de nuevo"
@@ -340,13 +340,13 @@ ese para los informes.
 Todos los comandos responden con `"status"`. Si dice `"error"`, el campo
 `"message"` explica qué pasó.
 
-### `command not found: pruebasudd`
+### `command not found: evaluaciones`
 
 No está instalado o no está en el PATH. Pídele a quien administra el sistema que
 ejecute:
 
 ```bash
-ln -s "$(Rscript -e 'cat(system.file("cli/pruebasudd.R", package="PruebasUDD"))')" /usr/local/bin/pruebasudd
+ln -s "$(Rscript -e 'cat(system.file("cli/evaluaciones.R", package="evaluaciones"))')" /usr/local/bin/evaluaciones
 ```
 
 ### `El layout declara 25 preguntas pero el archivo trae 30 columnas`

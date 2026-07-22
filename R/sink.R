@@ -135,7 +135,7 @@ build_run_record <- function(exam_result = NULL,
     forms = formas,
     analysis = analysis,
     versions = list(
-      package = as.character(utils::packageVersion("PruebasUDD")),
+      package = as.character(utils::packageVersion("evaluaciones")),
       exams = tryCatch(as.character(utils::packageVersion("exams")),
                        error = function(e) NA_character_),
       r = paste(R.version$major, R.version$minor, sep = ".")
