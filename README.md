@@ -7,6 +7,10 @@ varias formas aleatorizadas de un examen, exportar la clave de respuestas,
 corregir las hojas de respuesta de los estudiantes, calcular notas y análisis
 psicométrico, y emitir informes en PDF.
 
+> **¿Vas a operar el sistema, no a programarlo?**
+> Lee [MANUAL-OPERADOR.md](MANUAL-OPERADOR.md): el ciclo completo —armar la
+> prueba, corregirla y emitir los informes— sin escribir una línea de R.
+
 ## Instalación
 
 ```r
