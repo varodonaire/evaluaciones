@@ -193,9 +193,9 @@ test_that("editar una pregunta en mongo no afecta a las corridas previas", {
   skip_if_not(mongo_available(), "no hay un MongoDB accesible en localhost")
 
   sufijo <- paste(sample(letters, 10, replace = TRUE), collapse = "")
-  store <- question_store_mongo(db = "pruebasudd_test",
+  store <- question_store_mongo(db = "evaluaciones_test",
                                 collection = paste0("q_", sufijo))
-  withr::defer(try(mongolite::mongo(paste0("q_", sufijo), "pruebasudd_test")$drop(),
+  withr::defer(try(mongolite::mongo(paste0("q_", sufijo), "evaluaciones_test")$drop(),
                    silent = TRUE))
 
   fuente <- "\\begin{question}Original.\\end{question}\n%% \\exname{R_1}"

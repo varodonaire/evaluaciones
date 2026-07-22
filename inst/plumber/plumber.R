@@ -1,5 +1,5 @@
 # ==============================================================================
-# API HTTP de PruebasUDD
+# API HTTP de evaluaciones
 # ==============================================================================
 # Los mismos verbos que la CLI, sobre run_job(). Ninguna logica propia: si algo
 # se comporta distinto por HTTP que por linea de comandos, es un bug.
@@ -7,15 +7,15 @@
 # Levantar:
 #
 #   plumber::pr_run(plumber::pr(system.file("plumber/plumber.R",
-#                                           package = "PruebasUDD")), port = 8000)
+#                                           package = "evaluaciones")), port = 8000)
 #
 # La generacion de examenes necesita LaTeX y puede tardar; en produccion
 # conviene encolarla en vez de servirla sincrona.
 # ==============================================================================
 
-suppressMessages(library(PruebasUDD))
+suppressMessages(library(evaluaciones))
 
-#* @apiTitle PruebasUDD
+#* @apiTitle evaluaciones
 #* @apiDescription Generacion y revision de pruebas educativas
 #* @apiVersion 0.2.0
 
@@ -54,7 +54,7 @@ responder <- function(res, expr) {
 function() {
   list(
     status = "ok",
-    package = as.character(utils::packageVersion("PruebasUDD")),
+    package = as.character(utils::packageVersion("evaluaciones")),
     r = paste(R.version$major, R.version$minor, sep = "."),
     latex = nzchar(Sys.which("xelatex")) || nzchar(Sys.which("pdflatex")),
     mongo = mongo_available(),

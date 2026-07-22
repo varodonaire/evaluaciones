@@ -31,12 +31,12 @@ library(tidyverse)
 library(gt)
 library(showtext)
 # Fuente para los graficos. Se busca en las rutas habituales del sistema en vez
-# de una ruta fija; PRUEBASUDD_FONT_REGULAR permite apuntar a otro archivo.
+# de una ruta fija; EVALUACIONES_FONT_REGULAR permite apuntar a otro archivo.
 # Si no se encuentra, se usa la fuente por defecto en lugar de fallar el render.
 setup_report_font <- function(family = "Libertinus Sans",
                               filename = "LibertinusSans-Regular.otf") {
   candidates <- c(
-    Sys.getenv("PRUEBASUDD_FONT_REGULAR"),
+    Sys.getenv("EVALUACIONES_FONT_REGULAR"),
     file.path(sysfonts::font_paths(), filename),
     file.path(path.expand("~/Library/Fonts"), filename),
     file.path("/Library/Fonts", filename),

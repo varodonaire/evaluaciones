@@ -6,7 +6,7 @@
 \usage{
 question_store_mongo(
   url = "mongodb://localhost:27017",
-  db = "pruebasudd",
+  db = "evaluaciones",
   collection = "questions"
 )
 }

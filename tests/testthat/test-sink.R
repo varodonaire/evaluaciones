@@ -6,13 +6,13 @@ skip_sin_mongo <- function() {
 sink_mongo_temporal <- function(env = parent.frame()) {
   sufijo <- paste(sample(letters, 10, replace = TRUE), collapse = "")
   sink <- results_sink_mongo(
-    db = "pruebasudd_test",
+    db = "evaluaciones_test",
     runs_collection = paste0("runs_", sufijo),
     responses_collection = paste0("resp_", sufijo)
   )
   withr::defer({
     for (col in c(sink$runs_collection, sink$responses_collection)) {
-      try(mongolite::mongo(col, "pruebasudd_test")$drop(), silent = TRUE)
+      try(mongolite::mongo(col, "evaluaciones_test")$drop(), silent = TRUE)
     }
   }, envir = env)
   sink

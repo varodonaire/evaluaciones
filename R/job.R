@@ -109,7 +109,7 @@ store_from_spec <- function(spec) {
     ),
     mongo = question_store_mongo(
       url = spec$url %||% "mongodb://localhost:27017",
-      db = spec$db %||% "pruebasudd",
+      db = spec$db %||% "evaluaciones",
       collection = spec$collection %||% "questions"
     ),
     stop(sprintf("Tipo de store desconocido: '%s'. Validos: local, mongo", tipo))
@@ -132,7 +132,7 @@ sink_from_spec <- function(spec) {
     local = results_sink_local(dir = spec$dir %||% "reports"),
     mongo = results_sink_mongo(
       url = spec$url %||% "mongodb://localhost:27017",
-      db = spec$db %||% "pruebasudd",
+      db = spec$db %||% "evaluaciones",
       runs_collection = spec$runs_collection %||% "runs",
       responses_collection = spec$responses_collection %||% "responses"
     ),

@@ -27,7 +27,7 @@
 #' qs_search(store, section = "logica")
 #' }
 question_store_mongo <- function(url = "mongodb://localhost:27017",
-                                 db = "pruebasudd",
+                                 db = "evaluaciones",
                                  collection = "questions") {
   if (!requireNamespace("mongolite", quietly = TRUE)) {
     stop("El store de MongoDB necesita el paquete 'mongolite'. Instalalo con install.packages(\"mongolite\").")

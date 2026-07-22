@@ -1,4 +1,4 @@
 library(testthat)
-library(PruebasUDD)
+library(evaluaciones)
 
-test_check("PruebasUDD")
+test_check("evaluaciones")

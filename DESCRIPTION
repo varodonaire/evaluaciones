@@ -1,13 +1,11 @@
-Package: PruebasUDD
+Package: evaluaciones
 Type: Package
 Title: Generacion y Revision de Pruebas Educativas
 Version: 0.2.0
-Author: Alvaro UDD <alvaro@udd.cl>
-Maintainer: Alvaro UDD <alvaro@udd.cl>
 Authors@R: c(
     person(
-      "Alvaro", "UDD",
-      email = "alvaro@udd.cl",
+      "Alvaro", "Mattus-Donaire",
+      email = "varodonaire@me.com",
       role = c("aut", "cre")
     )
   )

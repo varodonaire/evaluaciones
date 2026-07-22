@@ -1,24 +1,24 @@
 #!/usr/bin/env Rscript
 # ==============================================================================
-# CLI de PruebasUDD
+# CLI de evaluaciones
 # ==============================================================================
 # Envoltorio delgado sobre run_job(): parsea argumentos, arma la especificacion
 # y escribe el resultado como JSON. Toda la logica vive en el paquete.
 #
-#   pruebasudd <accion> [--spec archivo.json] [--clave valor ...]
+#   evaluaciones <accion> [--spec archivo.json] [--clave valor ...]
 #
 # La especificacion puede venir de un archivo, de la entrada estandar, o
 # armarse con banderas sueltas. Las banderas ganan sobre el archivo.
 #
 # Ejemplos:
 #
-#   pruebasudd search-questions --store.type mongo --filters.section logica
-#   pruebasudd generate --spec examen.json
-#   pruebasudd reproduce --run-id algebra-2025... --sink.type mongo --store.type mongo
-#   echo '{"action":"list_runs","sink":{"type":"mongo"}}' | pruebasudd --spec -
+#   evaluaciones search-questions --store.type mongo --filters.section logica
+#   evaluaciones generate --spec examen.json
+#   evaluaciones reproduce --run-id algebra-2025... --sink.type mongo --store.type mongo
+#   echo '{"action":"list_runs","sink":{"type":"mongo"}}' | evaluaciones --spec -
 # ==============================================================================
 
-suppressMessages(library(PruebasUDD))
+suppressMessages(library(evaluaciones))
 
 # ------------------------------------------------------------------
 # Parseo de argumentos
@@ -101,13 +101,13 @@ merge_spec <- function(base, encima) {
 }
 
 uso <- function() {
-  cat("Uso: pruebasudd <accion> [--spec archivo.json] [--clave.subclave valor ...]\n\n")
+  cat("Uso: evaluaciones <accion> [--spec archivo.json] [--clave.subclave valor ...]\n\n")
   cat("Acciones:\n")
   for (a in job_actions()) cat(sprintf("  %s\n", gsub("_", "-", a)))
   cat("\nEjemplos:\n")
-  cat("  pruebasudd search-questions --store.type local --store.base_dir questions\n")
-  cat("  pruebasudd generate --spec examen.json\n")
-  cat("  pruebasudd list-runs --sink.type mongo\n")
+  cat("  evaluaciones search-questions --store.type local --store.base_dir questions\n")
+  cat("  evaluaciones generate --spec examen.json\n")
+  cat("  evaluaciones list-runs --sink.type mongo\n")
 }
 
 # ------------------------------------------------------------------

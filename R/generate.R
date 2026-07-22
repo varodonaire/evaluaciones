@@ -227,7 +227,7 @@ generation_record <- function(config, pool, matrices, order_seed) {
     matrices = matrices,
     order_seed = order_seed,
     versions = list(
-      package = as.character(utils::packageVersion("PruebasUDD")),
+      package = as.character(utils::packageVersion("evaluaciones")),
       exams = tryCatch(as.character(utils::packageVersion("exams")),
                        error = function(e) NA_character_),
       r = paste(R.version$major, R.version$minor, sep = ".")

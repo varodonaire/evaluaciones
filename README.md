@@ -1,4 +1,4 @@
-# PruebasUDD
+# evaluaciones
 
 Generación y revisión de pruebas educativas en R.
 
@@ -31,7 +31,7 @@ Dependencias externas según lo que se use:
 ### 1. Generar los exámenes
 
 ```r
-library(PruebasUDD)
+library(evaluaciones)
 
 config <- create_exam_config(
   name       = "algebra_b4_p1",
@@ -165,7 +165,7 @@ contrato. El resto del paquete no sabe cuál de los dos está usando.
 
 ```r
 local <- question_store_local("questions")
-mongo <- question_store_mongo()            # mongodb://localhost:27017, base "pruebasudd"
+mongo <- question_store_mongo()            # mongodb://localhost:27017, base "evaluaciones"
 
 qs_search(mongo, section = "logica")       # buscar
 qs_get(mongo, "logica_1-v2")               # traer con el código fuente
@@ -327,7 +327,7 @@ hoja <- layout_from_json("hoja.json")
 
 ```json
 {
-  "layout_id": "udd-hoja-25p",
+  "layout_id": "hoja-25p",
   "version": 1,
   "n_questions": 25,
   "choices": [["a","b","c","d","e"], ...],
@@ -385,30 +385,30 @@ job_actions()
 ### CLI
 
 ```bash
-Rscript "$(Rscript -e 'cat(system.file("cli/pruebasudd.R", package="PruebasUDD"))')" --help
+Rscript "$(Rscript -e 'cat(system.file("cli/evaluaciones.R", package="evaluaciones"))')" --help
 ```
 
 Conviene dejarlo en el `PATH`:
 
 ```bash
-ln -s "$(Rscript -e 'cat(system.file("cli/pruebasudd.R", package="PruebasUDD"))')" /usr/local/bin/pruebasudd
+ln -s "$(Rscript -e 'cat(system.file("cli/evaluaciones.R", package="evaluaciones"))')" /usr/local/bin/evaluaciones
 ```
 
 Cualquier campo de la especificación se puede dar como bandera con puntos:
 
 ```bash
-pruebasudd search-questions --store.type mongo --filters.section logica
+evaluaciones search-questions --store.type mongo --filters.section logica
 ```
 
 ```bash
-pruebasudd generate --spec examen.json
+evaluaciones generate --spec examen.json
 ```
 
 ```json
 {
   "action": "generate",
-  "store": { "type": "mongo", "db": "pruebasudd", "collection": "questions" },
-  "sink":  { "type": "mongo", "db": "pruebasudd" },
+  "store": { "type": "mongo", "db": "evaluaciones", "collection": "questions" },
+  "sink":  { "type": "mongo", "db": "evaluaciones" },
   "exam":  { "name": "algebra_b4", "year": 2025, "period": 4,
              "subject": "Algebra", "num_forms": 10,
              "groups": { "sizes": [4, 4, 2], "seeds": [13, 17, 57] } },
@@ -435,7 +435,7 @@ También acepta la especificación por entrada estándar con `--spec -`.
 ### API HTTP
 
 ```r
-pr <- plumber::pr(system.file("plumber/plumber.R", package = "PruebasUDD"))
+pr <- plumber::pr(system.file("plumber/plumber.R", package = "evaluaciones"))
 plumber::pr_run(pr, port = 8000)
 ```
 
@@ -515,7 +515,7 @@ sistema y, si no está instalada, los gráficos caen a la fuente por defecto en
 vez de fallar. Para apuntar a otro archivo:
 
 ```r
-Sys.setenv(PRUEBASUDD_FONT_REGULAR = "/ruta/a/LibertinusSans-Regular.otf")
+Sys.setenv(EVALUACIONES_FONT_REGULAR = "/ruta/a/LibertinusSans-Regular.otf")
 ```
 
 El `mainfont` del preámbulo LaTeX sigue siendo fijo: si xelatex no encuentra
