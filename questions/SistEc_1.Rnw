@@ -57,3 +57,6 @@ answerlist(respuestas, markup = "latex")
 %% \extype{schoice}
 %% \exsolution{\Sexpr{bitstring}}
 %% \exname{SistEc_1}
+%% \exsection{sistemas_ecuaciones}
+%% \exauthor{Alvaro Mattus-Donaire}
+%% \exversion{1}

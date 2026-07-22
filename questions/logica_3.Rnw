@@ -52,3 +52,6 @@ answerlist(respuestas, markup = "latex")
 %% \extype{schoice}
 %% \exsolution{\Sexpr{bitstring}}
 %% \exname{logica_3}
+%% \exsection{logica}
+%% \exauthor{Alvaro Mattus-Donaire}
+%% \exversion{1}

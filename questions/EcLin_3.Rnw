@@ -63,3 +63,6 @@ answerlist(respuestas, markup = "latex")
 %% \extype{schoice}
 %% \exsolution{\Sexpr{bitstring}}
 %% \exname{EcLin_3}
+%% \exsection{ecuaciones_lineales}
+%% \exauthor{Alvaro Mattus-Donaire}
+%% \exversion{1}

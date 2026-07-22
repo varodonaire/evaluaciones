@@ -50,3 +50,6 @@ answerlist(respuestas, markup = "latex")
 %% \extype{schoice}
 %% \exsolution{\Sexpr{bitstring}}
 %% \exname{cuantificadores_1}
+%% \exsection{cuantificadores}
+%% \exauthor{Alvaro Mattus-Donaire}
+%% \exversion{1}

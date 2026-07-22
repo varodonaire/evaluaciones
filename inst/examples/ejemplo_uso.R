@@ -136,11 +136,14 @@ head(resultados$topic_performance)
 # --- 3.1 Preparar metadatos para reportes ---
 # Esta función convierte los datos al formato que esperan los templates
 
-# Definir ejes temáticos (identificador y nombre descriptivo)
-ejes_df <- tibble::tibble(
-  identificador = c("PR", "SU", "Teo_bin", "SEC"),
-  nombre = c("Progresiones", "Sumatorias", "Teorema del Binomio", "Sucesiones")
-)
+# Definir ejes temáticos: el identificador es la clave de unión (el slug que
+# cada pregunta declara en \exsection) y el nombre es lo que ve el estudiante.
+ejes_df <- build_ejes_df(pool, nombres = c(
+  progresiones   = "Progresiones",
+  sumatorias     = "Sumatorias",
+  binomio_newton = "Teorema del Binomio",
+  sucesiones     = "Sucesiones"
+))
 
 # Preparar metadatos
 metadata <- prepare_report_metadata(

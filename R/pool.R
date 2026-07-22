@@ -4,6 +4,10 @@
 
 #' Crear pool de preguntas
 #'
+#' Cuando no se indican topicos explicitamente, se leen del campo \\exsection de
+#' cada ejercicio. Solo si el ejercicio no lo declara se cae al patron del nombre
+#' de archivo, que es como funcionaba antes.
+#'
 #' @param questions Vector de nombres de archivos .Rnw o data.frame con columnas 'file' y 'topic'
 #' @param topics Vector de temas/ejes correspondientes a cada pregunta (si questions es vector)
 #' @param base_dir Directorio base donde estan los archivos .Rnw
@@ -25,11 +29,18 @@
 #'     topic = c("Progresiones", "Sumatorias")
 #'   )
 #' )
+#'
+#' \dontrun{
+#' # Opcion 3: dejar que cada ejercicio declare su eje en \exsection
+#' pool <- create_question_pool(
+#'   questions = c("EcCuad_1.Rnw", "logica_1.Rnw"),
+#'   base_dir = "questions"
+#' )
+#' }
 create_question_pool <- function(questions, topics = NULL, base_dir = ".") {
-  
-  # Si es data.frame, extraer columnas
 
-if (is.data.frame(questions)) {
+  # Si es data.frame, extraer columnas
+  if (is.data.frame(questions)) {
     if (!all(c("file", "topic") %in% colnames(questions))) {
       stop("El data.frame debe tener columnas 'file' y 'topic'")
     }
@@ -38,12 +49,10 @@ if (is.data.frame(questions)) {
   } else {
     files <- questions
     if (is.null(topics)) {
-      # Intentar inferir topicos del nombre del archivo
-      topics <- gsub("_\\d+\\.Rnw$", "", basename(files))
-      message("Topicos inferidos de nombres de archivo: ", paste(unique(topics), collapse = ", "))
+      topics <- infer_topics(files, base_dir)
     }
   }
-  
+
   if (length(files) != length(topics)) {
     stop("El numero de preguntas debe coincidir con el numero de topicos")
   }
@@ -64,6 +73,47 @@ if (is.data.frame(questions)) {
   
   class(pool) <- c("question_pool", "list")
   return(pool)
+}
+
+#' Inferir el eje de cada pregunta
+#'
+#' Prefiere el campo \\exsection declarado por el propio ejercicio. Cae al
+#' patron del nombre de archivo solo para los que no lo declaran, de modo que
+#' un pool mixto funciona sin intervencion.
+#'
+#' @param files Nombres de archivo de los ejercicios
+#' @param base_dir Directorio base
+#'
+#' @return Vector de topicos, uno por archivo
+#' @keywords internal
+infer_topics <- function(files, base_dir = ".") {
+  rutas <- file.path(base_dir, files)
+
+  desde_seccion <- vapply(rutas, function(r) {
+    if (!file.exists(r)) return(NA_character_)
+    as.character(read_exercise_metadata(r, fields = "section")$section)[1]
+  }, character(1), USE.NAMES = FALSE)
+
+  # Fallback: el patron del nombre de archivo, quitando la extension y el numero
+  desde_nombre <- gsub("_\\d+$", "", tools::file_path_sans_ext(basename(files)))
+
+  topics <- ifelse(is.na(desde_seccion), desde_nombre, desde_seccion)
+
+  n_seccion <- sum(!is.na(desde_seccion))
+  if (n_seccion == length(files)) {
+    message(sprintf("Ejes leidos de \\exsection: %s",
+                    paste(unique(topics), collapse = ", ")))
+  } else if (n_seccion > 0) {
+    message(sprintf(
+      "Ejes: %d de %d desde \\exsection, el resto inferidos del nombre de archivo",
+      n_seccion, length(files)
+    ))
+  } else {
+    message("Topicos inferidos de nombres de archivo: ",
+            paste(unique(topics), collapse = ", "))
+  }
+
+  topics
 }
 
 #' Validar que existan todos los archivos del pool

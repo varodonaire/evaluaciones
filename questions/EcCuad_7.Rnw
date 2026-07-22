@@ -65,3 +65,6 @@ answerlist(respuestas, markup = "latex")
 %% \extype{schoice}
 %% \exsolution{\Sexpr{bitstring}}
 %% \exname{EcCuad_7}
+%% \exsection{ecuaciones_cuadraticas}
+%% \exauthor{Alvaro Mattus-Donaire}
+%% \exversion{1}
