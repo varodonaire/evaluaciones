@@ -304,6 +304,49 @@ ensure_responses <- function(scored_data, run_id, ...) {
   normalize_responses(scored_data, run_id, ...)
 }
 
+#' Convertir el items.json a data frame
+#'
+#' `Alternativas` es un vector por item, asi que un `bind_rows()` ingenuo
+#' multiplica cada item en tantas filas como alternativas tenga. Debe quedar
+#' como columna-lista: una fila por item, con sus alternativas dentro.
+#'
+#' @param items Lista de items (de export_items_json o del .json)
+#'
+#' @return Data frame con una fila por item
+#' @export
+items_to_df <- function(items) {
+  if (is.data.frame(items)) {
+    return(items)
+  }
+  if (length(items) == 0) {
+    stop("La lista de items esta vacia.")
+  }
+
+  campo <- function(nombre) {
+    vapply(items, function(x) {
+      valor <- x[[nombre]]
+      if (is.null(valor) || length(valor) == 0) NA_character_ else as.character(valor)[1]
+    }, character(1))
+  }
+  entero <- function(nombre) {
+    vapply(items, function(x) {
+      valor <- x[[nombre]]
+      if (is.null(valor) || length(valor) == 0) NA_integer_ else as.integer(valor)[1]
+    }, integer(1))
+  }
+
+  tibble(
+    Texto = campo("Texto"),
+    Alternativas = I(lapply(items, function(x) as.character(x$Alternativas))),
+    Eje = campo("Eje"),
+    Correcta = campo("Correcta"),
+    Origen = campo("Origen"),
+    Forma = entero("Forma"),
+    Pregunta = entero("Pregunta"),
+    Seed = entero("Seed")
+  )
+}
+
 #' Devolver las respuestas persistidas al formato calificado
 #'
 #' El esquema del sink usa nombres en minuscula y neutros; el analisis y los

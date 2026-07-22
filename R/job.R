@@ -270,12 +270,22 @@ job_report <- function(spec) {
     NULL
   }
 
-  # El informe del docente muestra los enunciados y sus alternativas, que no
-  # viven en las respuestas sino en el items.json de la generacion.
+  # Los informes muestran los enunciados y sus alternativas, que no viven en las
+  # respuestas sino en el items.json de la generacion. El pipeline historico los
+  # arrastraba porque score_responses() los unia al calificar; al reconstruir
+  # desde el sink hay que volver a unirlos.
   items_df <- if (!is.null(archivos$items)) {
-    bind_rows(safe_read(archivos$items, "json"))
+    items_to_df(safe_read(archivos$items, "json", simplifyDataFrame = FALSE))
   } else {
     NULL
+  }
+
+  if (!is.null(items_df)) {
+    scored <- scored %>%
+      left_join(
+        items_df %>% select("Forma", "Pregunta", "Texto", "Alternativas"),
+        by = c("Forma", "Pregunta")
+      )
   }
 
   # Los nombres legibles de los ejes se dan como {"slug": "Nombre"}
