@@ -7,7 +7,9 @@
 create_pool_from_patterns(patterns, nums = 1:5, extension = ".Rnw")
 }
 \arguments{
-\item{patterns}{Lista nombrada con patrones: list(Tema1 = "Patron1_", Tema2 = "Patron2_")}
+\item{patterns}{Lista nombrada con patrones: list(Tema1 = "Patron1_", Tema2 = "Patron2_").
+Un mismo tema puede repetirse para asociarle varios patrones, o el elemento
+puede ser un vector de patrones: list(Tema1 = c("Patron1_", "Patron2_"))}
 
 \item{nums}{Rango de numeros para cada patron (default: 1:5)}
 
@@ -20,9 +22,19 @@ Objeto question_pool
 Crear pool de preguntas desde patron de nombres
 }
 \examples{
+# Un patron por tema
 pool <- create_pool_from_patterns(
   patterns = list(
     "Progresiones" = "ProgArit_",
+    "Sumatorias" = "Sumatoria_"
+  ),
+  nums = 1:5
+)
+
+# Varios patrones para el mismo tema (nombre repetido o vector)
+pool <- create_pool_from_patterns(
+  patterns = list(
+    "Progresiones" = c("ProgArit_", "ProgGeom_"),
     "Sumatorias" = "Sumatoria_"
   ),
   nums = 1:5

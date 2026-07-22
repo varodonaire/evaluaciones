@@ -13,7 +13,8 @@ create_processing_config(
   num_questions = 25,
   output_dir = "reports",
   form_mapping = NULL,
-  generate_reports = FALSE
+  generate_reports = FALSE,
+  id_col = "Rut"
 )
 }
 \arguments{
@@ -34,6 +35,9 @@ create_processing_config(
 \item{form_mapping}{Mapeo de letras a numeros para formas}
 
 \item{generate_reports}{Generar reportes PDF (requiere Quarto)}
+
+\item{id_col}{Nombre de la columna identificadora de estudiante en los
+resultados (default: "Rut")}
 }
 \value{
 Objeto de clase "processing_config"

@@ -4,12 +4,13 @@
 \alias{calculate_student_scores}
 \title{Calcular puntajes por estudiante}
 \usage{
-calculate_student_scores(scored_data, id_col = "Rut")
+calculate_student_scores(scored_data, id_col = NULL)
 }
 \arguments{
 \item{scored_data}{Data frame con respuestas calificadas}
 
-\item{id_col}{Nombre de la columna de identificacion (default: "Rut")}
+\item{id_col}{Nombre de la columna de identificacion. NULL autodetecta
+entre "student_id" y "Rut"}
 }
 \value{
 Data frame con puntajes por estudiante

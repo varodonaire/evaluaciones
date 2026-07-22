@@ -4,12 +4,13 @@
 \alias{compare_forms}
 \title{Comparar equivalencia entre formas}
 \usage{
-compare_forms(scored_data, id_col = "student_id")
+compare_forms(scored_data, id_col = NULL)
 }
 \arguments{
 \item{scored_data}{Data frame con respuestas calificadas}
 
-\item{id_col}{Columna de identificacion de estudiante}
+\item{id_col}{Columna de identificacion de estudiante. NULL autodetecta
+entre "student_id" y "Rut"}
 }
 \value{
 Lista con estadisticas de comparacion entre formas

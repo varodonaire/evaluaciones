@@ -7,6 +7,8 @@
 convert_form_codes(df, form_mapping)
 }
 \description{
-Convertir formas de letras a numeros
+Acepta formas codificadas como letra ("a", "B") o como numero ("3", 3). Las
+filas cuya forma no se puede resolver se descartan, informando cuantas y con
+que valores, porque un mapeo equivocado vaciaba la tabla sin dejar rastro.
 }
 \keyword{internal}

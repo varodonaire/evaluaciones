@@ -7,7 +7,8 @@
 
 #' @importFrom dplyr %>% across all_of any_of arrange bind_rows case_when
 #' @importFrom dplyr desc distinct filter first group_by inner_join left_join
-#' @importFrom dplyr mutate n n_distinct rename select slice summarise sym ungroup
+#' @importFrom dplyr mutate n n_distinct rename row_number select slice
+#' @importFrom dplyr summarise sym ungroup
 #' @importFrom tidyr pivot_longer pivot_wider unite
 #' @importFrom stringr str_remove
 #' @importFrom tibble tibble
@@ -16,7 +17,7 @@
 #' @importFrom writexl write_xlsx
 #' @importFrom exams exams2pdf
 #' @importFrom stats aov cor median quantile sd setNames var
-#' @importFrom utils write.csv
+#' @importFrom utils head write.csv
 #' @importFrom tidyselect matches where
 NULL
 
@@ -68,13 +69,22 @@ create_exam_config <- function(name,
   }
   
   # Validar que sizes sumen num_forms
- if (sum(groups$sizes) != num_forms) {
+  if (sum(groups$sizes) != num_forms) {
     stop(sprintf(
       "La suma de group sizes (%d) debe ser igual a num_forms (%d)",
       sum(groups$sizes), num_forms
     ))
   }
-  
+
+  # Cada grupo necesita su propia seed: las formas del grupo comparten examen
+  if (length(groups$sizes) != length(groups$seeds)) {
+    stop(sprintf(
+      "Debe haber una seed por grupo: %d sizes vs %d seeds",
+      length(groups$sizes), length(groups$seeds)
+    ))
+  }
+
+
   config <- list(
     name = name,
     year = as.integer(year),
@@ -240,47 +250,48 @@ print.question_pool <- function(x, ...) {
 
 #' Generar matrices de seeds y orden para examenes
 #'
+#' Las formas de un mismo grupo son el MISMO examen con las preguntas en distinto
+#' orden. Para lograrlo, la semilla debe seguir a la pregunta y no a la posicion:
+#' exams2pdf indexa `seed` por columna, es decir por posicion dentro del examen,
+#' de modo que la fila de semillas se permuta con el mismo orden que la fila de
+#' preguntas.
+#'
 #' @param config Objeto exam_config
 #' @param pool Objeto question_pool
 #' @param order_seed Seed para la aleatorizacion del orden
 #'
-#' @return Lista con seed_matrix y order_matrix
+#' @return Lista con seed_matrix, order_matrix y question_matrix
 #' @keywords internal
 generate_exam_matrices <- function(config, pool, order_seed = 1234) {
   num_questions <- pool$n_questions
   num_forms <- config$num_forms
-  
-  # Generar seeds por grupo
+
+  # Una semilla por pregunta y por grupo, indexada por identidad de la pregunta
   group_seeds <- list()
   for (i in seq_along(config$groups$seeds)) {
     set.seed(config$groups$seeds[i])
     group_seeds[[i]] <- sample(1:100, num_questions, replace = TRUE)
   }
-  
-  # Matriz de seeds (expandir por tamanio de grupo)
-  seed_matrix <- NULL
-  for (i in seq_along(config$groups$sizes)) {
-    group_matrix <- matrix(
-      rep(group_seeds[[i]], config$groups$sizes[i]),
-      nrow = config$groups$sizes[i],
-      byrow = TRUE
-    )
-    seed_matrix <- rbind(seed_matrix, group_matrix)
-  }
-  
+
+  # A que grupo pertenece cada forma
+  form_group <- rep(seq_along(config$groups$sizes), times = config$groups$sizes)
+
   # Matriz de orden (que pregunta va en que posicion)
-  order_matrix <- matrix(0, nrow = num_forms, ncol = num_questions)
+  order_matrix <- matrix(0L, nrow = num_forms, ncol = num_questions)
   set.seed(order_seed)
   for (i in 1:num_forms) {
     order_matrix[i, ] <- sample(1:num_questions, num_questions)
   }
-  
-  # Matriz de preguntas (archivos en orden)
+
+  # Matriz de preguntas y de semillas, permutadas con el MISMO orden para que
+  # cada pregunta conserve su semilla al cambiar de posicion
   question_matrix <- matrix("", nrow = num_forms, ncol = num_questions)
+  seed_matrix <- matrix(0L, nrow = num_forms, ncol = num_questions)
   for (i in 1:num_forms) {
     question_matrix[i, ] <- pool$files[order_matrix[i, ]]
+    seed_matrix[i, ] <- group_seeds[[form_group[i]]][order_matrix[i, ]]
   }
-  
+
   list(
     seed_matrix = seed_matrix,
     order_matrix = order_matrix,
@@ -312,59 +323,76 @@ generate_exams <- function(config, pool, order_seed = 1234, verbose = TRUE) {
   # Generar matrices
   matrices <- generate_exam_matrices(config, pool, order_seed)
   
-  # Guardar matriz de orden para referencia
-  order_file <- file.path(config$output_dir, paste0(config$name, "_orden.csv"))
+  # Resolver rutas a absolutas ANTES de cambiar de directorio: exams2pdf se
+  # ejecuta desde pool$base_dir, y una ruta relativa se resolveria contra esa
+  # base en vez de contra el directorio del usuario.
   if (!dir.exists(config$output_dir)) {
     dir.create(config$output_dir, recursive = TRUE)
   }
+  output_dir <- normalizePath(config$output_dir, mustWork = TRUE)
+
+  template <- config$template
+  if (!is.null(template)) {
+    # Un template propio se indica relativo al directorio del usuario
+    if (file.exists(template)) {
+      template <- normalizePath(template, mustWork = TRUE)
+    }
+  }
+
+  # Guardar matriz de orden para referencia
+  order_file <- file.path(output_dir, paste0(config$name, "_orden.csv"))
   write.csv(matrices$order_matrix, order_file, row.names = FALSE)
-  
-  # Configurar directorio de trabajo
-  old_wd <- getwd()
+
+  tex_dir <- file.path(output_dir, "tex")
+  if (!dir.exists(tex_dir)) {
+    dir.create(tex_dir, recursive = TRUE)
+  }
+
+  # Configurar directorio de trabajo (restaurado pase lo que pase)
   if (pool$base_dir != ".") {
+    old_wd <- getwd()
+    on.exit(setwd(old_wd), add = TRUE)
     setwd(pool$base_dir)
   }
-  
+
   # Generar examenes
-  tryCatch({
-    exams_result <- exams2pdf(
+  exams_result <- tryCatch(
+    exams2pdf(
       matrices$question_matrix,
       seed = matrices$seed_matrix,
-      template = config$template,
+      template = template,
       texengine = config$tex_engine,
       verbose = verbose,
-      texdir = file.path(config$output_dir, "tex"),
+      texdir = tex_dir,
       name = config$name,
       header = list(forma = function(i) sprintf("{%s}", config$form_labels[i])),
-      dir = config$output_dir
-    )
-    
-    setwd(old_wd)
-    
-    # Crear objeto resultado
-    result <- list(
-      config = config,
-      pool = pool,
-      exams_raw = exams_result,
-      matrices = matrices,
-      order_file = order_file,
-      timestamp = Sys.time()
-    )
-    
-    class(result) <- c("exam_result", "list")
-    
-    if (verbose) {
-      message("\n[OK] Examenes generados exitosamente")
-      message(sprintf("  Formas creadas: %d", config$num_forms))
-      message(sprintf("  Directorio: %s", config$output_dir))
+      dir = output_dir
+    ),
+    error = function(e) {
+      stop(sprintf("Error generando examenes: %s", e$message), call. = FALSE)
     }
-    
-    return(result)
-    
-  }, error = function(e) {
-    setwd(old_wd)
-    stop(sprintf("Error generando examenes: %s", e$message))
-  })
+  )
+
+  # Crear objeto resultado
+  result <- list(
+    config = config,
+    pool = pool,
+    exams_raw = exams_result,
+    matrices = matrices,
+    order_file = order_file,
+    output_dir = output_dir,
+    timestamp = Sys.time()
+  )
+
+  class(result) <- c("exam_result", "list")
+
+  if (verbose) {
+    message("\n[OK] Examenes generados exitosamente")
+    message(sprintf("  Formas creadas: %d", config$num_forms))
+    message(sprintf("  Directorio: %s", output_dir))
+  }
+
+  result
 }
 
 # ==============================================================================
@@ -469,6 +497,8 @@ export_items_json <- function(exam_result, output_file = NULL) {
 #' @param output_dir Directorio para archivos de salida
 #' @param form_mapping Mapeo de letras a numeros para formas
 #' @param generate_reports Generar reportes PDF (requiere Quarto)
+#' @param id_col Nombre de la columna identificadora de estudiante en los
+#'   resultados (default: "Rut")
 #'
 #' @return Objeto de clase "processing_config"
 #' @export
@@ -480,7 +510,8 @@ create_processing_config <- function(results_file,
                                       num_questions = 25,
                                       output_dir = "reports",
                                       form_mapping = NULL,
-                                      generate_reports = FALSE) {
+                                      generate_reports = FALSE,
+                                      id_col = "Rut") {
   
   # Mapeo por defecto de formas
   if (is.null(form_mapping)) {
@@ -498,7 +529,8 @@ create_processing_config <- function(results_file,
     num_questions = num_questions,
     output_dir = output_dir,
     form_mapping = form_mapping,
-    generate_reports = generate_reports
+    generate_reports = generate_reports,
+    id_col = id_col
   )
   
   class(config) <- c("processing_config", "list")
@@ -522,6 +554,7 @@ print.processing_config <- function(x, ...) {
   cat(sprintf("  Sesiones:    %s\n", ifelse(is.null(x$files$sessions), "(no)", x$files$sessions)))
   cat(sprintf("  Session ID:  %s\n", ifelse(is.null(x$session_id), "(todas)", x$session_id)))
   cat(sprintf("  Preguntas:   %d\n", x$num_questions))
+  cat(sprintf("  ID columna:  %s\n", x$id_col))
   cat(sprintf("  Output:      %s\n", x$output_dir))
   cat(sprintf("  Reportes:    %s\n", ifelse(x$generate_reports, "Si", "No")))
   cat(strrep("=", 55), "\n", sep = "")
@@ -694,11 +727,52 @@ standardize_response_columns <- function(df, num_questions) {
 }
 
 #' Convertir formas de letras a numeros
+#'
+#' Acepta formas codificadas como letra ("a", "B") o como numero ("3", 3). Las
+#' filas cuya forma no se puede resolver se descartan, informando cuantas y con
+#' que valores, porque un mapeo equivocado vaciaba la tabla sin dejar rastro.
+#'
 #' @keywords internal
 convert_form_codes <- function(df, form_mapping) {
+
+  raw_forma <- tolower(trimws(as.character(df$Forma)))
+
+  # Mapeo por letra; si no aplica, intentar interpretar como numero
+  mapped <- unname(form_mapping[raw_forma])
+  numeric_fallback <- suppressWarnings(as.integer(raw_forma))
+  mapped <- ifelse(is.na(mapped), numeric_fallback, mapped)
+
+  # Solo son validas las formas dentro del rango del mapeo
+  valid_codes <- unname(form_mapping)
+  mapped[!is.na(mapped) & !mapped %in% valid_codes] <- NA_integer_
+
+  n_dropped <- sum(is.na(mapped))
+  if (n_dropped > 0) {
+    bad_values <- unique(raw_forma[is.na(mapped)])
+    bad_values[is.na(bad_values)] <- "(vacio)"
+    detalle <- sprintf(
+      paste0("  Valores no reconocidos: %s\n",
+             "  Formas esperadas: %s\n",
+             "  Revisa el argumento form_mapping de create_processing_config()."),
+      paste(head(bad_values, 10), collapse = ", "),
+      paste(names(form_mapping), collapse = ", ")
+    )
+
+    if (n_dropped == nrow(df)) {
+      stop(sprintf(
+        "convert_form_codes: ninguna de las %d filas tiene una forma reconocible.\n%s",
+        nrow(df), detalle
+      ), call. = FALSE)
+    }
+
+    warning(sprintf(
+      "convert_form_codes: %d de %d filas descartadas por forma no reconocida.\n%s",
+      n_dropped, nrow(df), detalle
+    ), call. = FALSE)
+  }
+
   df %>%
-    mutate(Forma = tolower(trimws(as.character(Forma)))) %>%
-    mutate(Forma = form_mapping[Forma]) %>%
+    mutate(Forma = mapped) %>%
     filter(!is.na(Forma))
 }
 
@@ -720,6 +794,53 @@ pivot_responses_long <- function(df) {
 # ==============================================================================
 # SCORING Y ANALISIS
 # ==============================================================================
+
+#' Resolver el nombre de la columna identificadora de estudiante
+#'
+#' El pipeline de correccion produce datos con columna "Rut", mientras que los
+#' metadatos preparados para los templates usan "student_id". Esta funcion
+#' detecta cual esta presente para que las funciones de analisis acepten ambos.
+#'
+#' @param df Data frame a inspeccionar
+#' @param id_col Nombre explicito de la columna, o NULL para autodetectar
+#' @param candidates Nombres candidatos, en orden de preferencia
+#'
+#' @return Nombre de la columna identificadora
+#' @keywords internal
+resolve_id_col <- function(df, id_col = NULL,
+                           candidates = c("student_id", "Rut", "rut", "RUT")) {
+  if (!is.null(id_col)) {
+    if (!id_col %in% colnames(df)) {
+      stop(sprintf(
+        "Columna identificadora '%s' no encontrada. Columnas disponibles: %s",
+        id_col, paste(colnames(df), collapse = ", ")
+      ))
+    }
+    return(id_col)
+  }
+
+  found <- intersect(candidates, colnames(df))
+  if (length(found) == 0) {
+    stop(sprintf(
+      "No se encontro columna identificadora (%s). Especifica id_col explicitamente.",
+      paste(candidates, collapse = ", ")
+    ))
+  }
+  found[1]
+}
+
+#' Normalizar el nombre de la columna de aciertos a is_correcta
+#' @keywords internal
+normalize_correct_col <- function(scored_data) {
+  if ("is_correct" %in% colnames(scored_data) &&
+      !"is_correcta" %in% colnames(scored_data)) {
+    scored_data <- scored_data %>% rename(is_correcta = is_correct)
+  }
+  if (!"is_correcta" %in% colnames(scored_data)) {
+    stop("Los datos no contienen columna 'is_correcta' ni 'is_correct'. Usa score_responses() primero.")
+  }
+  scored_data
+}
 
 #' Unir respuestas con claves y calcular correctas
 #'
@@ -759,16 +880,20 @@ score_responses <- function(responses_long, items) {
 #' Calcular puntajes por estudiante
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param id_col Nombre de la columna de identificacion (default: "Rut")
+#' @param id_col Nombre de la columna de identificacion. NULL autodetecta
+#'   entre "student_id" y "Rut"
 #'
 #' @return Data frame con puntajes por estudiante
 #' @export
-calculate_student_scores <- function(scored_data, id_col = "Rut") {
+calculate_student_scores <- function(scored_data, id_col = NULL) {
+  id_col <- resolve_id_col(scored_data, id_col)
+  scored_data <- normalize_correct_col(scored_data)
+
   scored_data %>%
     group_by(across(all_of(id_col))) %>%
     summarise(
       n_respuestas = n(),
-      correctas = sum(is_correct, na.rm = TRUE),
+      correctas = sum(is_correcta, na.rm = TRUE),
       porcentaje = 100 * correctas / n_respuestas,
       .groups = "drop"
     ) %>%
@@ -783,11 +908,13 @@ calculate_student_scores <- function(scored_data, id_col = "Rut") {
 #' @return Data frame con rendimiento por grupo
 #' @export
 calculate_item_performance <- function(scored_data, by = "Origen") {
+  scored_data <- normalize_correct_col(scored_data)
+
   scored_data %>%
     group_by(across(all_of(by))) %>%
     summarise(
       n_respuestas = n(),
-      correctas = sum(is_correct, na.rm = TRUE),
+      correctas = sum(is_correcta, na.rm = TRUE),
       porcentaje = 100 * correctas / n_respuestas,
       .groups = "drop"
     ) %>%
@@ -843,7 +970,7 @@ process_assessment <- function(config) {
   if (!is.null(config$session_id) && !is.null(data$sessions)) {
     session_students <- get_session_students(data$sessions, config$session_id)
     results_long <- results_long %>%
-      filter(Rut %in% session_students)
+      filter(!!sym(config$id_col) %in% session_students)
     message(sprintf("[OK] Filtrado a sesion: %d estudiantes", length(session_students)))
   }
   
@@ -851,7 +978,7 @@ process_assessment <- function(config) {
   scored <- score_responses(results_long, data$items)
   
   # 7. Calcular metricas
-  student_scores <- calculate_student_scores(scored)
+  student_scores <- calculate_student_scores(scored, id_col = config$id_col)
   item_performance <- calculate_item_performance(scored, "Origen")
   topic_performance <- calculate_item_performance(scored, "Eje")
   
@@ -886,6 +1013,7 @@ process_assessment <- function(config) {
     student_scores = student_scores,
     item_performance = item_performance,
     topic_performance = topic_performance,
+    id_col = config$id_col,
     config = config
   ))
 }
@@ -896,7 +1024,9 @@ process_assessment <- function(config) {
 
 #' Crear pool de preguntas desde patron de nombres
 #'
-#' @param patterns Lista nombrada con patrones: list(Tema1 = "Patron1_", Tema2 = "Patron2_")
+#' @param patterns Lista nombrada con patrones: list(Tema1 = "Patron1_", Tema2 = "Patron2_").
+#'   Un mismo tema puede repetirse para asociarle varios patrones, o el elemento
+#'   puede ser un vector de patrones: list(Tema1 = c("Patron1_", "Patron2_"))
 #' @param nums Rango de numeros para cada patron (default: 1:5)
 #' @param extension Extension de archivo (default: ".Rnw")
 #'
@@ -904,6 +1034,7 @@ process_assessment <- function(config) {
 #' @export
 #'
 #' @examples
+#' # Un patron por tema
 #' pool <- create_pool_from_patterns(
 #'   patterns = list(
 #'     "Progresiones" = "ProgArit_",
@@ -911,18 +1042,43 @@ process_assessment <- function(config) {
 #'   ),
 #'   nums = 1:5
 #' )
+#'
+#' # Varios patrones para el mismo tema (nombre repetido o vector)
+#' pool <- create_pool_from_patterns(
+#'   patterns = list(
+#'     "Progresiones" = c("ProgArit_", "ProgGeom_"),
+#'     "Sumatorias" = "Sumatoria_"
+#'   ),
+#'   nums = 1:5
+#' )
 create_pool_from_patterns <- function(patterns, nums = 1:5, extension = ".Rnw") {
-  
+
+  if (is.null(names(patterns)) || any(!nzchar(names(patterns)))) {
+    stop("'patterns' debe ser una lista nombrada: list(Tema = \"Patron_\")")
+  }
+
+  # Iterar por indice: patterns[[nombre]] devolveria siempre el primer elemento
+  # cuando hay nombres repetidos, perdiendo patrones silenciosamente.
   files <- c()
   topics <- c()
-  
-  for (topic in names(patterns)) {
-    pattern <- patterns[[topic]]
-    new_files <- paste0(pattern, nums, extension)
-    files <- c(files, new_files)
-    topics <- c(topics, rep(topic, length(nums)))
+
+  for (i in seq_along(patterns)) {
+    topic <- names(patterns)[i]
+    for (pattern in patterns[[i]]) {
+      new_files <- paste0(pattern, nums, extension)
+      files <- c(files, new_files)
+      topics <- c(topics, rep(topic, length(nums)))
+    }
   }
-  
+
+  if (anyDuplicated(files)) {
+    dups <- unique(files[duplicated(files)])
+    warning(sprintf(
+      "Patrones generan archivos duplicados (%d):\n  %s",
+      length(dups), paste("-", dups, collapse = "\n  ")
+    ))
+  }
+
   create_question_pool(files, topics)
 }
 
@@ -990,7 +1146,9 @@ get_template_path <- function(template_name) {
 #' @param ejes_df Data frame con definicion de ejes (identificador, nombre)
 #' @param sessions_df Data frame con sesiones (opcional)
 #' @param reference_form Forma de referencia para questions_extra (default: ultima forma)
-#' @param id_col Columna de identificacion de estudiantes
+#' @param id_col Columna de identificacion de estudiantes. NULL autodetecta entre
+#'   "student_id" y "Rut"; en ambos casos se renombra a "student_id", que es lo
+#'   que esperan los templates
 #'
 #' @return Lista con estructura compatible con templates
 #' @export
@@ -1000,18 +1158,16 @@ prepare_report_metadata <- function(scored_data,
                                      ejes_df = NULL,
                                      sessions_df = NULL,
                                      reference_form = NULL,
-                                     id_col = "student_id") {
-  
-  # Renombrar columna de ID si es necesario
-  if (id_col != "student_id" && id_col %in% colnames(scored_data)) {
+                                     id_col = NULL) {
+
+  # Los templates esperan student_id: renombrar la columna identificadora
+  id_col <- resolve_id_col(scored_data, id_col)
+  if (id_col != "student_id") {
     scored_data <- scored_data %>% rename(student_id = !!sym(id_col))
   }
-  
-  # Renombrar is_correct a is_correcta si es necesario
-  if ("is_correct" %in% colnames(scored_data) && !"is_correcta" %in% colnames(scored_data)) {
-    scored_data <- scored_data %>% rename(is_correcta = is_correct)
-  }
-  
+
+  scored_data <- normalize_correct_col(scored_data)
+
   # Calcular results_general (puntajes por estudiante)
   results_general <- scored_data %>%
     group_by(student_id) %>%
@@ -1024,7 +1180,7 @@ prepare_report_metadata <- function(scored_data,
   
   # Asegurar que students_df tenga columna student_id
   if (!is.null(students_df)) {
-    if (id_col != "student_id" && id_col %in% colnames(students_df)) {
+    if (!"student_id" %in% colnames(students_df) && id_col %in% colnames(students_df)) {
       students_df <- students_df %>% rename(student_id = !!sym(id_col))
     }
     # Asegurar que tenga columna name
@@ -1519,10 +1675,7 @@ add_grades <- function(student_scores, ...) {
 #' @export
 calculate_difficulty_index <- function(scored_data, by_form = FALSE) {
   
-  # Asegurar nombre de columna
-  if ("is_correct" %in% colnames(scored_data)) {
-    scored_data <- scored_data %>% rename(is_correcta = is_correct)
-  }
+  scored_data <- normalize_correct_col(scored_data)
   
   if (by_form) {
     difficulty <- scored_data %>%
@@ -1567,19 +1720,18 @@ calculate_difficulty_index <- function(scored_data, by_form = FALSE) {
 #'
 #' @param scored_data Data frame con respuestas calificadas
 #' @param method Metodo de calculo: "pbis" (punto-biserial), "d27" (grupos extremos)
-#' @param id_col Columna de identificacion de estudiante
+#' @param id_col Columna de identificacion de estudiante. NULL autodetecta
+#'   entre "student_id" y "Rut"
 #'
 #' @return Data frame con indices de discriminacion por item
 #' @export
 calculate_discrimination_index <- function(scored_data, 
                                             method = c("pbis", "d27"),
-                                            id_col = "student_id") {
+                                            id_col = NULL) {
   method <- match.arg(method)
-  
-  # Asegurar nombre de columna
-  if ("is_correct" %in% colnames(scored_data)) {
-    scored_data <- scored_data %>% rename(is_correcta = is_correct)
-  }
+
+  id_col <- resolve_id_col(scored_data, id_col)
+  scored_data <- normalize_correct_col(scored_data)
   
   # Calcular puntaje total por estudiante
   student_totals <- scored_data %>%
@@ -1658,16 +1810,15 @@ calculate_discrimination_index <- function(scored_data,
 #' Valores > 0.7 se consideran aceptables, > 0.8 buenos, > 0.9 excelentes.
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param id_col Columna de identificacion de estudiante
+#' @param id_col Columna de identificacion de estudiante. NULL autodetecta
+#'   entre "student_id" y "Rut"
 #'
 #' @return Lista con coeficiente de confiabilidad y estadisticas relacionadas
 #' @export
-calculate_reliability <- function(scored_data, id_col = "student_id") {
-  
-  # Asegurar nombre de columna
-  if ("is_correct" %in% colnames(scored_data)) {
-    scored_data <- scored_data %>% rename(is_correcta = is_correct)
-  }
+calculate_reliability <- function(scored_data, id_col = NULL) {
+
+  id_col <- resolve_id_col(scored_data, id_col)
+  scored_data <- normalize_correct_col(scored_data)
   
   # Crear matriz de respuestas (filas = estudiantes, columnas = items)
   response_matrix <- scored_data %>%
@@ -1688,23 +1839,38 @@ calculate_reliability <- function(scored_data, id_col = "student_id") {
   # Calcular KR-20 / Alpha de Cronbach
   n_items <- ncol(response_matrix)
   n_students <- nrow(response_matrix)
-  
+
+  # KR-20 no esta definido con menos de 2 items con varianza
+  if (n_items < 2) {
+    stop(sprintf(
+      "KR-20 requiere al menos 2 items con varianza; se encontraron %d. Revisa los datos.",
+      n_items
+    ), call. = FALSE)
+  }
+
   # Proporciones de respuestas correctas por item
   p <- colMeans(response_matrix, na.rm = TRUE)
   q <- 1 - p
-  
+
   # Suma de p*q
   sum_pq <- sum(p * q)
-  
+
   # Varianza del puntaje total
   total_scores <- rowSums(response_matrix, na.rm = TRUE)
   var_total <- var(total_scores, na.rm = TRUE)
-  
+
+  if (is.na(var_total) || var_total == 0) {
+    stop("KR-20 no es calculable: todos los estudiantes obtuvieron el mismo puntaje.",
+         call. = FALSE)
+  }
+
   # KR-20
   kr20 <- (n_items / (n_items - 1)) * (1 - sum_pq / var_total)
   
-  # Error estandar de medida (SEM)
-  sem <- sqrt(var_total) * sqrt(1 - kr20)
+  # Error estandar de medida (SEM). KR-20 puede superar 1 por poco cuando la
+  # prueba es muy consistente (varianza muestral vs poblacional); sin acotar,
+  # sqrt() de un negativo devolvia NaN.
+  sem <- sqrt(var_total) * sqrt(max(0, 1 - kr20))
   
   # Clasificacion
   clasificacion <- case_when(
@@ -1735,16 +1901,15 @@ calculate_reliability <- function(scored_data, id_col = "student_id") {
 #' grupos de rendimiento (alto, medio, bajo).
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param id_col Columna de identificacion de estudiante
+#' @param id_col Columna de identificacion de estudiante. NULL autodetecta
+#'   entre "student_id" y "Rut"
 #'
 #' @return Data frame con analisis de distractores por item
 #' @export
-analyze_distractors <- function(scored_data, id_col = "student_id") {
-  
-  # Asegurar nombre de columna
-  if ("is_correct" %in% colnames(scored_data)) {
-    scored_data <- scored_data %>% rename(is_correcta = is_correct)
-  }
+analyze_distractors <- function(scored_data, id_col = NULL) {
+
+  id_col <- resolve_id_col(scored_data, id_col)
+  scored_data <- normalize_correct_col(scored_data)
   
   # Calcular puntaje total y clasificar en grupos
   student_totals <- scored_data %>%
@@ -1791,16 +1956,15 @@ analyze_distractors <- function(scored_data, id_col = "student_id") {
 #' en terminos de dificultad.
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param id_col Columna de identificacion de estudiante
+#' @param id_col Columna de identificacion de estudiante. NULL autodetecta
+#'   entre "student_id" y "Rut"
 #'
 #' @return Lista con estadisticas de comparacion entre formas
 #' @export
-compare_forms <- function(scored_data, id_col = "student_id") {
-  
-  # Asegurar nombre de columna
-  if ("is_correct" %in% colnames(scored_data)) {
-    scored_data <- scored_data %>% rename(is_correcta = is_correct)
-  }
+compare_forms <- function(scored_data, id_col = NULL) {
+
+  id_col <- resolve_id_col(scored_data, id_col)
+  scored_data <- normalize_correct_col(scored_data)
   
   # Calcular estadisticas por forma
   form_stats <- scored_data %>%
@@ -1907,13 +2071,15 @@ detect_problematic_items <- function(difficulty, discrimination) {
 #' Realizar analisis psicometrico completo
 #'
 #' @param scored_data Data frame con respuestas calificadas
-#' @param id_col Columna de identificacion de estudiante
+#' @param id_col Columna de identificacion de estudiante. NULL autodetecta
+#'   entre "student_id" y "Rut"
 #'
 #' @return Lista con todos los analisis psicometricos
 #' @export
-run_psychometric_analysis <- function(scored_data, id_col = "student_id") {
-  
-  message("Ejecutando analisis psicometrico...")
+run_psychometric_analysis <- function(scored_data, id_col = NULL) {
+
+  id_col <- resolve_id_col(scored_data, id_col)
+  message(sprintf("Ejecutando analisis psicometrico (id: %s)...", id_col))
   
   # Calcular todos los indices
   difficulty <- calculate_difficulty_index(scored_data)
@@ -1954,7 +2120,8 @@ run_psychometric_analysis <- function(scored_data, id_col = "student_id") {
 #' @param output_name Nombre del archivo de salida (sin extension)
 #' @param template Ruta al template Quarto (usa ReporteOperador.qmd por defecto)
 #' @param working_dir Directorio de trabajo para Quarto
-#' @param id_col Columna de identificacion de estudiante
+#' @param id_col Columna de identificacion de estudiante. NULL autodetecta
+#'   entre "student_id" y "Rut"
 #'
 #' @return Lista con status y ruta del archivo generado
 #' @export
@@ -1964,7 +2131,7 @@ generate_operator_report <- function(session_id = NULL,
                                       output_name = NULL,
                                       template = NULL,
                                       working_dir = NULL,
-                                      id_col = "student_id") {
+                                      id_col = NULL) {
   
   message("Generando reporte psicometrico para operador...")
   

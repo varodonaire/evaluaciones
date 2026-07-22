@@ -4,12 +4,13 @@
 \alias{analyze_distractors}
 \title{Analisis de distractores}
 \usage{
-analyze_distractors(scored_data, id_col = "student_id")
+analyze_distractors(scored_data, id_col = NULL)
 }
 \arguments{
 \item{scored_data}{Data frame con respuestas calificadas}
 
-\item{id_col}{Columna de identificacion de estudiante}
+\item{id_col}{Columna de identificacion de estudiante. NULL autodetecta
+entre "student_id" y "Rut"}
 }
 \value{
 Data frame con analisis de distractores por item

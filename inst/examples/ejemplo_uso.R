@@ -31,8 +31,7 @@ print(config_examen)
 # Opción A: Usando patrones de nombres
 pool <- create_pool_from_patterns(
   patterns = list(
-    "Progresiones"    = "ProgArit_",
-    "Progresiones"    = "ProgGeom_",
+    "Progresiones"    = c("ProgArit_", "ProgGeom_"),
     "Sumatorias"      = "Sumatoria_",
     "Binomio Newton"  = "BinoNewton_",
     "Sucesiones"      = "Sucesion_"

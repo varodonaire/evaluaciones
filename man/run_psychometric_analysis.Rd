@@ -4,12 +4,13 @@
 \alias{run_psychometric_analysis}
 \title{Realizar analisis psicometrico completo}
 \usage{
-run_psychometric_analysis(scored_data, id_col = "student_id")
+run_psychometric_analysis(scored_data, id_col = NULL)
 }
 \arguments{
 \item{scored_data}{Data frame con respuestas calificadas}
 
-\item{id_col}{Columna de identificacion de estudiante}
+\item{id_col}{Columna de identificacion de estudiante. NULL autodetecta
+entre "student_id" y "Rut"}
 }
 \value{
 Lista con todos los analisis psicometricos
