@@ -106,3 +106,46 @@ fake_exam_result <- function(n_forms = 2, sizes = NULL, seeds = NULL,
     class = c("exam_result", "list")
   )
 }
+
+# ------------------------------------------------------------------
+# Corridas y respuestas
+# ------------------------------------------------------------------
+
+# Un exam_result minimo, sin necesidad de generar PDFs
+exam_result_falso <- function(n_forms = 2, n_questions = 3, con_store = TRUE) {
+  slugs <- paste0("Q", seq_len(n_questions))
+  ids <- if (con_store) paste0(slugs, "-v1") else slugs
+
+  config <- create_exam_config("prueba", 2025, 4, "Mat", num_forms = n_forms)
+  pool <- list(
+    files = paste0(slugs, ".Rnw"),
+    topics = rep("algebra", n_questions),
+    topic_lookup = setNames(rep("algebra", n_questions), slugs),
+    base_dir = ".", n_questions = n_questions,
+    unique_topics = "algebra",
+    question_ids = if (con_store) ids else NULL,
+    content_hashes = if (con_store) paste0("sha256:", seq_len(n_questions)) else NULL
+  )
+  class(pool) <- c("question_pool", "list")
+
+  matrices <- generate_exam_matrices(config, pool, order_seed = 3)
+
+  structure(list(config = config, pool = pool, matrices = matrices,
+                 order_seed = 3),
+            class = c("exam_result", "list"))
+}
+
+respuestas_falsas <- function(n_students = 4, n_questions = 3, form = 1L) {
+  tidyr::crossing(
+    Rut = sprintf("%d-%d", seq_len(n_students), seq_len(n_students)),
+    Pregunta = seq_len(n_questions)
+  ) |>
+    dplyr::mutate(
+      Forma = form,
+      Origen = paste0("Q", Pregunta),
+      Eje = "algebra",
+      Correcta = "a",
+      Respuesta = ifelse(Pregunta == 1, "a", "b"),
+      is_correct = Respuesta == Correcta
+    )
+}

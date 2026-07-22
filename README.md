@@ -204,6 +204,53 @@ res <- generate_exams(config, pool)
 llamar a `exams`. El pool guarda los `question_id`, así que queda registrado con
 qué versión exacta se generó cada examen.
 
+## Corridas reproducibles
+
+Cada procesamiento queda registrado como una **corrida**: qué versión de cada
+pregunta se aplicó, en qué posición de qué forma, con qué semilla y con qué
+versiones de R, `exams` y el paquete.
+
+```r
+sink <- results_sink_mongo()          # o results_sink_local("reportes")
+rs_ensure_indexes(sink)
+
+res <- process_assessment(config, sink = sink, exam_result = generacion)
+res$run_id
+```
+
+`process_assessment()` sigue escribiendo los tres `.xlsx` de siempre. El sink
+añade, sin quitar nada, una fila por **alumno y pregunta**:
+
+```
+run_id  student_id  form  position  question_id  content_hash  seed
+section  correcta  respuesta  is_correcta
+```
+
+Con eso se puede rehacer el análisis más adelante, o correr uno mejor, sin
+volver a la hoja escaneada.
+
+### Regenerar un examen desde su `run_id`
+
+```r
+reproduce_run(sink, store, res$run_id, output_dir = "regenerado")
+```
+
+Recupera la corrida, trae del store las versiones exactas que se aplicaron y
+regenera los PDFs con las mismas semillas. Antes de generar nada compara el
+`content_hash` de cada pregunta con el registrado: si algo cambió, aborta en vez
+de producir un examen que no es el que se rindió. Con `strict = FALSE` avisa y
+continúa.
+
+Contra MongoDB esa comprobación casi nunca salta, porque las versiones son
+inmutables: editar una pregunta crea `logica_1-v2` y la corrida sigue apuntando
+a `logica_1-v1`. Donde sí protege es en el store local, donde los `.Rnw` se
+editan en el sitio.
+
+```r
+rs_list_runs(sink)     # corridas disponibles
+rs_read_run(sink, id)  # corrida + respuestas
+```
+
 ## Columna identificadora
 
 El pipeline de corrección trabaja con `Rut` y las plantillas de informe con
