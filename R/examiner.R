@@ -33,7 +33,14 @@ NULL
 #' @param subject Asignatura (ej: "Matematicas", "Fisica")
 #' @param num_forms Numero de formas/versiones del examen (default: 10)
 #' @param groups Lista con configuracion de grupos: list(sizes = c(4,4,2), seeds = c(13,17,57))
-#' @param template Ruta al archivo template LaTeX (opcional)
+#' @param template Template LaTeX: ruta a un .tex propio, o el nombre de un
+#'   template de 'exams' (default: "plain")
+#' @param usepackage Paquetes LaTeX adicionales a cargar. Por defecto siunitx y
+#'   amsmath, que es lo que usan los enunciados con \\qty y \\num
+#' @param header Lista de campos a pasar al template LaTeX. NULL (default)
+#'   significa automatico: se pasa `forma` con la letra de cada version solo si
+#'   se usa un template propio, porque los templates de 'exams' no definen
+#'   \\forma y fallarian al compilar
 #' @param output_dir Directorio de salida para PDFs
 #' @param tex_engine Motor LaTeX a usar ("xelatex", "pdflatex", etc.)
 #'
@@ -54,7 +61,9 @@ create_exam_config <- function(name,
                                 subject,
                                 num_forms = 10,
                                 groups = NULL,
-                                template = NULL,
+                                template = "plain",
+                                usepackage = c("siunitx", "amsmath"),
+                                header = NULL,
                                 output_dir = "exams",
                                 tex_engine = "xelatex") {
   
@@ -93,6 +102,8 @@ create_exam_config <- function(name,
     num_forms = as.integer(num_forms),
     groups = groups,
     template = template,
+    usepackage = usepackage,
+    header = header,
     output_dir = output_dir,
     tex_engine = tex_engine,
     form_labels = LETTERS[1:num_forms]
@@ -331,17 +342,33 @@ generate_exams <- function(config, pool, order_seed = 1234, verbose = TRUE) {
   }
   output_dir <- normalizePath(config$output_dir, mustWork = TRUE)
 
+  # exams2pdf no acepta template = NULL; su default es "plain". Aceptamos NULL
+  # por compatibilidad con configuraciones antiguas.
   template <- config$template
-  if (!is.null(template)) {
-    # Un template propio se indica relativo al directorio del usuario
-    if (file.exists(template)) {
-      template <- normalizePath(template, mustWork = TRUE)
-    }
+  if (is.null(template)) {
+    template <- "plain"
+  }
+  # Un template propio se indica relativo al directorio del usuario
+  template_propio <- file.exists(template)
+  if (template_propio) {
+    template <- normalizePath(template, mustWork = TRUE)
   }
 
-  # Guardar matriz de orden para referencia
+  # El campo `forma` solo puede pasarse a un template que defina \forma. Los
+  # templates que trae 'exams' no lo hacen y fallan al compilar.
+  header <- config$header
+  if (is.null(header) && template_propio) {
+    header <- list(forma = function(i) sprintf("{%s}", config$form_labels[i]))
+  }
+
+  # Guardar matriz de orden para referencia (formato legible)
   order_file <- file.path(output_dir, paste0(config$name, "_orden.csv"))
   write.csv(matrices$order_matrix, order_file, row.names = FALSE)
+
+  # Registro completo de generacion: sin la seed_matrix el examen no se puede
+  # reproducir, y hasta ahora solo vivia en memoria.
+  record_file <- file.path(output_dir, paste0(config$name, "_generacion.rds"))
+  saveRDS(generation_record(config, pool, matrices, order_seed), record_file)
 
   tex_dir <- file.path(output_dir, "tex")
   if (!dir.exists(tex_dir)) {
@@ -361,11 +388,12 @@ generate_exams <- function(config, pool, order_seed = 1234, verbose = TRUE) {
       matrices$question_matrix,
       seed = matrices$seed_matrix,
       template = template,
+      usepackage = config$usepackage,
       texengine = config$tex_engine,
       verbose = verbose,
       texdir = tex_dir,
       name = config$name,
-      header = list(forma = function(i) sprintf("{%s}", config$form_labels[i])),
+      header = header,
       dir = output_dir
     ),
     error = function(e) {
@@ -379,7 +407,9 @@ generate_exams <- function(config, pool, order_seed = 1234, verbose = TRUE) {
     pool = pool,
     exams_raw = exams_result,
     matrices = matrices,
+    order_seed = order_seed,
     order_file = order_file,
+    record_file = record_file,
     output_dir = output_dir,
     timestamp = Sys.time()
   )
@@ -390,9 +420,52 @@ generate_exams <- function(config, pool, order_seed = 1234, verbose = TRUE) {
     message("\n[OK] Examenes generados exitosamente")
     message(sprintf("  Formas creadas: %d", config$num_forms))
     message(sprintf("  Directorio: %s", output_dir))
+    message(sprintf("  Registro:   %s", basename(record_file)))
   }
 
   result
+}
+
+#' Construir el registro de una generacion de examenes
+#'
+#' Reune todo lo necesario para reproducir una generacion mas adelante: la
+#' configuracion, el pool, ambas matrices y las versiones del entorno. La
+#' seed_matrix es la pieza critica; sin ella el examen no se puede regenerar.
+#'
+#' @param config Objeto exam_config
+#' @param pool Objeto question_pool
+#' @param matrices Lista de generate_exam_matrices()
+#' @param order_seed Seed usada para el orden
+#'
+#' @return Lista con el registro de generacion
+#' @keywords internal
+generation_record <- function(config, pool, matrices, order_seed) {
+  list(
+    config = config,
+    pool = pool,
+    matrices = matrices,
+    order_seed = order_seed,
+    versions = list(
+      package = as.character(utils::packageVersion("PruebasUDD")),
+      exams = tryCatch(as.character(utils::packageVersion("exams")),
+                       error = function(e) NA_character_),
+      r = paste(R.version$major, R.version$minor, sep = ".")
+    ),
+    created_at = Sys.time()
+  )
+}
+
+#' Leer el registro de generacion de un examen
+#'
+#' @param file Ruta al archivo `<name>_generacion.rds`
+#'
+#' @return Lista con el registro de generacion
+#' @export
+read_generation_record <- function(file) {
+  if (!file.exists(file)) {
+    stop(sprintf("Registro de generacion no encontrado: %s", file))
+  }
+  readRDS(file)
 }
 
 # ==============================================================================
@@ -414,16 +487,21 @@ export_items_json <- function(exam_result, output_file = NULL) {
   
   # Helper para acceso seguro
   get_or_null <- function(x, name) if (!is.null(x[[name]])) x[[name]] else NULL
-  
+
   exam_names <- names(results)
-  
+
+  # exams registra en metainfo la semilla que efectivamente uso para cada
+  # ejercicio (solo cuando se genero pasando `seed`). Es la fuente autoritativa;
+  # la seed_matrix queda como respaldo si por algun motivo no viniera.
+  seed_matrix <- exam_result$matrices$seed_matrix
+
   items <- lapply(seq_along(results), function(i_exam) {
     exam <- results[[i_exam]]
-    
+
     # Numero de forma
     forma <- suppressWarnings(as.integer(gsub("\\D", "", exam_names[i_exam])))
     if (is.na(forma)) forma <- i_exam
-    
+
     lapply(seq_along(exam), function(i_q) {
       q <- exam[[i_q]]
       mi <- q$metainfo
@@ -454,12 +532,20 @@ export_items_json <- function(exam_result, output_file = NULL) {
         if (length(idx) == 1) letters[idx] else paste(letters[idx], collapse = ",")
       }
       
+      # Semilla de ESTE item, con respaldo en la matriz [forma, posicion]
+      seed <- get_or_null(mi, "seed")
+      if (is.null(seed) && !is.null(seed_matrix) &&
+          i_exam <= nrow(seed_matrix) && i_q <= ncol(seed_matrix)) {
+        seed <- seed_matrix[i_exam, i_q]
+      }
+      seed <- if (is.null(seed)) NA_integer_ else as.integer(seed)
+
       list(
         Texto = texto,
         Alternativas = alternativas,
         Eje = unname(eje),
         Correcta = letra_correcta,
-        Seed = get_or_null(mi, "seed"),
+        Seed = seed,
         Origen = origen,
         Forma = forma,
         Pregunta = i_q,
