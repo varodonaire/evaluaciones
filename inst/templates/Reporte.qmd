@@ -30,11 +30,32 @@ execute:
 library(tidyverse)
 library(gt)
 library(showtext)
-font_add(
-  family = "Libertinus Sans",
-  regular = "/Users/alvaro/Library/Fonts/LibertinusSans-Regular.otf"
-)
-showtext_auto()
+# Fuente para los graficos. Se busca en las rutas habituales del sistema en vez
+# de una ruta fija; PRUEBASUDD_FONT_REGULAR permite apuntar a otro archivo.
+# Si no se encuentra, se usa la fuente por defecto en lugar de fallar el render.
+setup_report_font <- function(family = "Libertinus Sans",
+                              filename = "LibertinusSans-Regular.otf") {
+  candidates <- c(
+    Sys.getenv("PRUEBASUDD_FONT_REGULAR"),
+    file.path(sysfonts::font_paths(), filename),
+    file.path(path.expand("~/Library/Fonts"), filename),
+    file.path("/Library/Fonts", filename),
+    file.path("/usr/share/fonts/opentype/libertinus", filename),
+    file.path("/usr/share/fonts/truetype/libertinus", filename)
+  )
+  candidates <- candidates[nzchar(candidates) & file.exists(candidates)]
+
+  if (length(candidates) == 0) {
+    message("Fuente '", family, "' no encontrada; se usa la fuente por defecto.")
+    return("sans")
+  }
+
+  font_add(family = family, regular = candidates[1])
+  showtext_auto()
+  family
+}
+
+base_font <- setup_report_font()
 
 # Set locale to UTF-8
 Sys.setlocale("LC_ALL", "es_MX.UTF-8")
@@ -151,11 +172,11 @@ ggplot(eje_summary, aes(x=reorder(nombre, porcentaje), y=porcentaje, fill=Catego
    drop = FALSE
  ) +
  labs(y="Porcentaje (%)") +
- theme_minimal(base_family = "Libertinus Sans") +
+ theme_minimal(base_family = base_font) +
  theme(legend.position = "none") +
   theme(axis.title.y = element_blank()) +
   theme(plot.title = element_blank())+
-  theme(text = element_text(family = "Libertinus Sans")) +
+  theme(text = element_text(family = base_font)) +
   theme(text = element_text(size=10))+
   theme(axis.title.x = element_text(size=7))+
   theme(plot.title = element_text(size=10))

@@ -14,9 +14,13 @@ generate_exam_matrices(config, pool, order_seed = 1234)
 \item{order_seed}{Seed para la aleatorizacion del orden}
 }
 \value{
-Lista con seed_matrix y order_matrix
+Lista con seed_matrix, order_matrix y question_matrix
 }
 \description{
-Generar matrices de seeds y orden para examenes
+Las formas de un mismo grupo son el MISMO examen con las preguntas en distinto
+orden. Para lograrlo, la semilla debe seguir a la pregunta y no a la posicion:
+exams2pdf indexa `seed` por columna, es decir por posicion dentro del examen,
+de modo que la fila de semillas se permuta con el mismo orden que la fila de
+preguntas.
 }
 \keyword{internal}

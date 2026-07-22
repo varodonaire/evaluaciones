@@ -7,7 +7,7 @@
 calculate_discrimination_index(
   scored_data,
   method = c("pbis", "d27"),
-  id_col = "student_id"
+  id_col = NULL
 )
 }
 \arguments{
@@ -15,7 +15,8 @@ calculate_discrimination_index(
 
 \item{method}{Metodo de calculo: "pbis" (punto-biserial), "d27" (grupos extremos)}
 
-\item{id_col}{Columna de identificacion de estudiante}
+\item{id_col}{Columna de identificacion de estudiante. NULL autodetecta
+entre "student_id" y "Rut"}
 }
 \value{
 Data frame con indices de discriminacion por item

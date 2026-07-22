@@ -4,12 +4,13 @@
 \alias{calculate_reliability}
 \title{Calcular confiabilidad de la prueba (KR-20 / Alpha de Cronbach)}
 \usage{
-calculate_reliability(scored_data, id_col = "student_id")
+calculate_reliability(scored_data, id_col = NULL)
 }
 \arguments{
 \item{scored_data}{Data frame con respuestas calificadas}
 
-\item{id_col}{Columna de identificacion de estudiante}
+\item{id_col}{Columna de identificacion de estudiante. NULL autodetecta
+entre "student_id" y "Rut"}
 }
 \value{
 Lista con coeficiente de confiabilidad y estadisticas relacionadas

@@ -11,7 +11,7 @@ prepare_report_metadata(
   ejes_df = NULL,
   sessions_df = NULL,
   reference_form = NULL,
-  id_col = "student_id"
+  id_col = NULL
 )
 }
 \arguments{
@@ -27,7 +27,9 @@ prepare_report_metadata(
 
 \item{reference_form}{Forma de referencia para questions_extra (default: ultima forma)}
 
-\item{id_col}{Columna de identificacion de estudiantes}
+\item{id_col}{Columna de identificacion de estudiantes. NULL autodetecta entre
+"student_id" y "Rut"; en ambos casos se renombra a "student_id", que es lo
+que esperan los templates}
 }
 \value{
 Lista con estructura compatible con templates

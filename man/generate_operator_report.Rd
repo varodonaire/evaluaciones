@@ -11,7 +11,7 @@ generate_operator_report(
   output_name = NULL,
   template = NULL,
   working_dir = NULL,
-  id_col = "student_id"
+  id_col = NULL
 )
 }
 \arguments{
@@ -27,7 +27,8 @@ generate_operator_report(
 
 \item{working_dir}{Directorio de trabajo para Quarto}
 
-\item{id_col}{Columna de identificacion de estudiante}
+\item{id_col}{Columna de identificacion de estudiante. NULL autodetecta
+entre "student_id" y "Rut"}
 }
 \value{
 Lista con status y ruta del archivo generado
