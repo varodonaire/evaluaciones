@@ -366,6 +366,98 @@ Con layout, la lectura sigue el contrato y `num_questions` se toma de él. Sin
 layout, el paquete usa las heurísticas de siempre, así que el flujo existente no
 cambia.
 
+## Usarlo desde fuera de R
+
+El paquete expone sus operaciones como **trabajos**: una especificación en JSON
+que dice qué hacer y contra qué. La CLI y la API HTTP son envoltorios delgados
+sobre `run_job()`; ninguno tiene lógica propia, así que ambos hacen exactamente
+lo mismo.
+
+```r
+job_actions()
+#> "generate" "score" "reproduce" "list_runs" "search_questions" "migrate_questions"
+```
+
+### CLI
+
+```bash
+Rscript "$(Rscript -e 'cat(system.file("cli/pruebasudd.R", package="PruebasUDD"))')" --help
+```
+
+Conviene dejarlo en el `PATH`:
+
+```bash
+ln -s "$(Rscript -e 'cat(system.file("cli/pruebasudd.R", package="PruebasUDD"))')" /usr/local/bin/pruebasudd
+```
+
+Cualquier campo de la especificación se puede dar como bandera con puntos:
+
+```bash
+pruebasudd search-questions --store.type mongo --filters.section logica
+```
+
+```bash
+pruebasudd generate --spec examen.json
+```
+
+```json
+{
+  "action": "generate",
+  "store": { "type": "mongo", "db": "pruebasudd", "collection": "questions" },
+  "sink":  { "type": "mongo", "db": "pruebasudd" },
+  "exam":  { "name": "algebra_b4", "year": 2025, "period": 4,
+             "subject": "Algebra", "num_forms": 10,
+             "groups": { "sizes": [4, 4, 2], "seeds": [13, 17, 57] } },
+  "pool":  { "section": ["ecuaciones_lineales", "logica"] },
+  "output_dir": "salida",
+  "order_seed": 1234
+}
+```
+
+Devuelve JSON por la salida estándar y código 0 o 1, que es lo que necesita un
+backend para encolarlo:
+
+```json
+{
+  "action": "generate", "status": "ok",
+  "pdfs": ["algebra_b41.pdf", "..."],
+  "items_file": "salida/algebra_b4_items.json",
+  "run_id": "algebra_b4-20250722103000-a1b2c3"
+}
+```
+
+También acepta la especificación por entrada estándar con `--spec -`.
+
+### API HTTP
+
+```r
+pr <- plumber::pr(system.file("plumber/plumber.R", package = "PruebasUDD"))
+plumber::pr_run(pr, port = 8000)
+```
+
+| Endpoint | Acción |
+|---|---|
+| `GET /health` | estado, versiones, si hay LaTeX y MongoDB |
+| `POST /jobs` | cualquier trabajo |
+| `POST /questions/search` | buscar preguntas |
+| `POST /questions/migrate` | migrar entre stores |
+| `POST /exams/generate` | generar exámenes |
+| `POST /assessments/score` | corregir respuestas |
+| `POST /runs/list` | listar corridas |
+| `POST /runs/reproduce` | reproducir una corrida |
+
+```bash
+curl -X POST localhost:8000/questions/search \
+  -H 'Content-Type: application/json' \
+  -d '{"store":{"type":"mongo"},"filters":{"section":"logica"}}'
+```
+
+Los errores vuelven con status 400 y `{"status":"error","message":"..."}`.
+
+**Generar exámenes necesita LaTeX y tarda.** En producción conviene encolar esa
+acción en vez de servirla síncrona, y empaquetar el motor en una imagen con TeX
+Live, Quarto y R.
+
 ## Columna identificadora
 
 El pipeline de corrección trabaja con `Rut` y las plantillas de informe con
