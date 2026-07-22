@@ -97,12 +97,7 @@ rs_write_run.results_sink_mongo <- function(sink, run, ...) {
 #' @rdname rs_write_responses
 #' @export
 rs_write_responses.results_sink_mongo <- function(sink, scored_data, run_id, ...) {
-  respuestas <- if (all(names(empty_responses()) %in% names(scored_data))) {
-    scored_data
-  } else {
-    normalize_responses(scored_data, run_id, ...)
-  }
-  respuestas$run_id <- run_id
+  respuestas <- ensure_responses(scored_data, run_id, ...)
 
   con <- sink_conn(sink, "responses")
   on.exit(try(con$disconnect(), silent = TRUE), add = TRUE)

@@ -61,7 +61,7 @@ rs_write_responses.results_sink_local <- function(sink, scored_data, run_id, ...
   }
 
   contenido <- readRDS(archivo)
-  contenido$responses <- normalize_responses(scored_data, run_id)
+  contenido$responses <- ensure_responses(scored_data, run_id, ...)
   saveRDS(contenido, archivo)
 
   invisible(nrow(contenido$responses))

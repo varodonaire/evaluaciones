@@ -284,6 +284,56 @@ normalize_responses <- function(scored_data, run_id, id_col = NULL, run = NULL) 
   out[names(empty_responses())]
 }
 
+#' Normalizar respuestas solo si hace falta
+#'
+#' Los sinks reciben tanto datos calificados crudos como respuestas ya
+#' normalizadas. Volver a normalizar lo ya normalizado destruye la informacion,
+#' porque los nombres de columna ya no son los que se buscan.
+#'
+#' @param scored_data Datos calificados o respuestas ya normalizadas
+#' @param run_id Identificador de la corrida
+#' @param ... Argumentos para normalize_responses()
+#'
+#' @return Data frame con el esquema de respuestas
+#' @keywords internal
+ensure_responses <- function(scored_data, run_id, ...) {
+  if (all(names(empty_responses()) %in% names(scored_data))) {
+    scored_data$run_id <- run_id
+    return(scored_data[names(empty_responses())])
+  }
+  normalize_responses(scored_data, run_id, ...)
+}
+
+#' Devolver las respuestas persistidas al formato calificado
+#'
+#' El esquema del sink usa nombres en minuscula y neutros; el analisis y los
+#' templates de reporte esperan los nombres historicos. Esta funcion traduce
+#' entre ambos, que es lo que permite rehacer un analisis meses despues
+#' partiendo solo de lo que quedo guardado.
+#'
+#' @param responses Data frame de respuestas (de rs_read_run)
+#'
+#' @return Data frame con el formato que consume el analisis
+#' @export
+responses_to_scored <- function(responses) {
+  if (nrow(responses) == 0) {
+    stop("La corrida no tiene respuestas guardadas.")
+  }
+
+  tibble(
+    student_id = as.character(responses$student_id),
+    Forma = as.integer(responses$form),
+    Pregunta = as.integer(responses$position),
+    Origen = as.character(responses$slug),
+    Eje = as.character(responses$section),
+    Correcta = as.character(responses$correcta),
+    Respuesta = as.character(responses$respuesta),
+    is_correcta = as.logical(responses$is_correcta),
+    question_id = as.character(responses$question_id),
+    Seed = as.integer(responses$seed)
+  )
+}
+
 #' Aplanar el registro de formas a un data frame
 #'
 #' @param run Registro de corrida
