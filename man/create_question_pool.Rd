@@ -17,7 +17,9 @@ create_question_pool(questions, topics = NULL, base_dir = ".")
 Objeto de clase "question_pool"
 }
 \description{
-Crear pool de preguntas
+Cuando no se indican topicos explicitamente, se leen del campo \\exsection de
+cada ejercicio. Solo si el ejercicio no lo declara se cae al patron del nombre
+de archivo, que es como funcionaba antes.
 }
 \examples{
 # Opcion 1: Vectores separados
@@ -33,4 +35,12 @@ pool <- create_question_pool(
     topic = c("Progresiones", "Sumatorias")
   )
 )
+
+\dontrun{
+# Opcion 3: dejar que cada ejercicio declare su eje en \exsection
+pool <- create_question_pool(
+  questions = c("EcCuad_1.Rnw", "logica_1.Rnw"),
+  base_dir = "questions"
+)
+}
 }

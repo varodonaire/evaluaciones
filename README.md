@@ -120,6 +120,40 @@ generate_all_reports(
 )
 ```
 
+## Ejes temáticos
+
+Cada pregunta declara su eje en el propio `.Rnw`, con los campos de metadatos de
+`exams`:
+
+```latex
+%% \extype{schoice}
+%% \exname{EcCuad_1}
+%% \exsection{ecuaciones_cuadraticas}
+%% \exauthor{Alvaro Mattus-Donaire}
+%% \exversion{1}
+```
+
+El eje tiene **dos nombres, con roles distintos**:
+
+- **`\exsection` lleva el slug**: es la clave de unión, agrupa la psicometría y
+  viaja al JSON. Minúsculas, `snake_case`, sin tildes ni espacios. Tiene que ser
+  estable: cambiarlo rompe los análisis históricos.
+- **`ejes_df` lleva el nombre legible**: es lo que ve el estudiante en el informe.
+  Puede cambiar y llevar tildes sin romper nada.
+
+```r
+pool <- create_question_pool(dir("questions"), base_dir = "questions")
+
+ejes <- build_ejes_df(pool, nombres = c(
+  ecuaciones_cuadraticas = "Ecuaciones cuadráticas",
+  logica                 = "Lógica"
+))
+```
+
+`create_question_pool()` lee `\exsection` de cada archivo. Si un ejercicio no lo
+declara, infiere el eje del prefijo del nombre de archivo, así que un pool mixto
+funciona sin intervención.
+
 ## Columna identificadora
 
 El pipeline de corrección trabaja con `Rut` y las plantillas de informe con
