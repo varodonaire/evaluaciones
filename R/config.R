@@ -125,6 +125,9 @@ print.exam_config <- function(x, ...) {
 #' @param generate_reports Generar reportes PDF (requiere Quarto)
 #' @param id_col Nombre de la columna identificadora de estudiante en los
 #'   resultados (default: "Rut")
+#' @param layout Objeto answer_sheet_layout que describe la hoja aplicada. Si se
+#'   da, la lectura se dirige por el contrato en vez de adivinar por convencion,
+#'   y `num_questions` se toma de el
 #'
 #' @return Objeto de clase "processing_config"
 #' @export
@@ -137,7 +140,13 @@ create_processing_config <- function(results_file,
                                       output_dir = "reports",
                                       form_mapping = NULL,
                                       generate_reports = FALSE,
-                                      id_col = "Rut") {
+                                      id_col = "Rut",
+                                      layout = NULL) {
+
+  if (!is.null(layout)) {
+    validate_layout(layout)
+    num_questions <- layout$n_questions
+  }
   
   # Mapeo por defecto de formas
   if (is.null(form_mapping)) {
@@ -156,7 +165,8 @@ create_processing_config <- function(results_file,
     output_dir = output_dir,
     form_mapping = form_mapping,
     generate_reports = generate_reports,
-    id_col = id_col
+    id_col = id_col,
+    layout = layout
   )
   
   class(config) <- c("processing_config", "list")
@@ -181,6 +191,8 @@ print.processing_config <- function(x, ...) {
   cat(sprintf("  Session ID:  %s\n", ifelse(is.null(x$session_id), "(todas)", x$session_id)))
   cat(sprintf("  Preguntas:   %d\n", x$num_questions))
   cat(sprintf("  ID columna:  %s\n", x$id_col))
+  cat(sprintf("  Layout:      %s\n",
+              if (is.null(x$layout)) "(por convencion)" else x$layout$layout_id))
   cat(sprintf("  Output:      %s\n", x$output_dir))
   cat(sprintf("  Reportes:    %s\n", ifelse(x$generate_reports, "Si", "No")))
   cat(strrep("=", 55), "\n", sep = "")

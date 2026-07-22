@@ -28,7 +28,8 @@ Imports:
     readxl,
     writexl,
     exams,
-    digest
+    digest,
+    rlang
 Suggests:
     quarto,
     testthat (>= 3.0.0),
