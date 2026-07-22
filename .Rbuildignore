@@ -1,3 +1,5 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^\.claude$
+^questions$
+^exams\.(pdf|html)$
