@@ -154,6 +154,56 @@ ejes <- build_ejes_df(pool, nombres = c(
 declara, infiere el eje del prefijo del nombre de archivo, así que un pool mixto
 funciona sin intervención.
 
+## Preguntas en base de datos
+
+Las preguntas pueden vivir en un directorio o en MongoDB, detrás del mismo
+contrato. El resto del paquete no sabe cuál de los dos está usando.
+
+```r
+local <- question_store_local("questions")
+mongo <- question_store_mongo()            # mongodb://localhost:27017, base "pruebasudd"
+
+qs_search(mongo, section = "logica")       # buscar
+qs_get(mongo, "logica_1-v2")               # traer con el código fuente
+qs_materialize(mongo, ids, dir = "tmp")    # bajar a archivos .Rnw
+qs_put(mongo, source, section = "logica")  # guardar
+```
+
+Cargar un directorio a la base:
+
+```r
+qs_ensure_indexes(mongo)
+qs_migrate(question_store_local("questions"), mongo)
+```
+
+Es idempotente: si el contenido de una pregunta no cambió, no se crea una
+versión nueva. Correrlo dos veces no duplica nada.
+
+### Versiones inmutables
+
+En MongoDB, **editar una pregunta crea una versión nueva y deja intacta la
+anterior**. El `question_id` (`logica_1-v2`) identifica una versión concreta; el
+`slug` (`logica_1`) es estable entre versiones.
+
+Eso es lo que permite que un análisis de hace dos años siga apuntando al ítem que
+realmente se aplicó, aunque la pregunta se haya reescrito diez veces desde
+entonces. El `content_hash` es un sha256 del código fuente y es lo que decide si
+un cambio es real.
+
+El store local no versiona: cada archivo es su propia última versión y el
+`question_id` es el slug. Sirve para trabajar sin conexión.
+
+### Generar desde la base
+
+```r
+pool <- create_pool_from_store(mongo, section = c("logica", "conjuntos"))
+res <- generate_exams(config, pool)
+```
+
+`generate_exams()` materializa las preguntas a un directorio temporal antes de
+llamar a `exams`. El pool guarda los `question_id`, así que queda registrado con
+qué versión exacta se generó cada examen.
+
 ## Columna identificadora
 
 El pipeline de corrección trabaja con `Rut` y las plantillas de informe con

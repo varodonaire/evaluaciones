@@ -12,8 +12,8 @@
 #' @param groups Lista con configuracion de grupos: list(sizes = c(4,4,2), seeds = c(13,17,57))
 #' @param template Template LaTeX: ruta a un .tex propio, o el nombre de un
 #'   template de 'exams' (default: "plain")
-#' @param usepackage Paquetes LaTeX adicionales a cargar. Por defecto siunitx y
-#'   amsmath, que es lo que usan los enunciados con \\qty y \\num
+#' @param usepackage Paquetes LaTeX adicionales a cargar. Por defecto siunitx,
+#'   amsmath y csquotes, que cubren \\qty, \\num, align* y \\enquote
 #' @param header Lista de campos a pasar al template LaTeX. NULL (default)
 #'   significa automatico: se pasa `forma` con la letra de cada version solo si
 #'   se usa un template propio, porque los templates de 'exams' no definen
@@ -39,7 +39,7 @@ create_exam_config <- function(name,
                                 num_forms = 10,
                                 groups = NULL,
                                 template = "plain",
-                                usepackage = c("siunitx", "amsmath"),
+                                usepackage = c("siunitx", "amsmath", "csquotes"),
                                 header = NULL,
                                 output_dir = "exams",
                                 tex_engine = "xelatex") {

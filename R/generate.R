@@ -118,11 +118,29 @@ generate_exams <- function(config, pool, order_seed = 1234, verbose = TRUE) {
     dir.create(tex_dir, recursive = TRUE)
   }
 
+  # Un pool ligado a un store no tiene los .Rnw en disco: se materializan a un
+  # directorio temporal, que pasa a ser el base_dir de esta generacion.
+  base_dir <- pool$base_dir
+  if (!is.null(pool$store)) {
+    base_dir <- tempfile("preguntas")
+    qs_materialize(pool$store, pool$question_ids, dir = base_dir)
+    if (verbose) {
+      message(sprintf("Materializadas %d preguntas del store en %s",
+                      pool$n_questions, base_dir))
+    }
+  }
+
+  # Los ejercicios se tejen en un entorno que cuelga de globalenv, asi que las
+  # funciones de 'exams' que usan (answerlist, num_to_schoice...) tienen que
+  # estar en el search path. Es la convencion de R/exams: los ejercicios se
+  # escriben llamandolas sin calificar.
+  with_exams_attached()
+
   # Configurar directorio de trabajo (restaurado pase lo que pase)
-  if (pool$base_dir != ".") {
+  if (base_dir != ".") {
     old_wd <- getwd()
     on.exit(setwd(old_wd), add = TRUE)
-    setwd(pool$base_dir)
+    setwd(base_dir)
   }
 
   # Generar examenes
@@ -167,6 +185,26 @@ generate_exams <- function(config, pool, order_seed = 1234, verbose = TRUE) {
   }
 
   result
+}
+
+#' Asegurar que 'exams' este en el search path
+#'
+#' Los ejercicios .Rnw llaman a `answerlist()`, `num_to_schoice()` y companía
+#' sin calificar, que es como los escribe la documentacion de R/exams. Al tejer,
+#' esas funciones se buscan en el search path, no en el namespace de este
+#' paquete, asi que hay que adjuntar 'exams' si el usuario no lo hizo.
+#'
+#' Si esta funcion lo adjunta, lo deja adjunto: desengancharlo a mitad de camino
+#' romperia cualquier codigo posterior del usuario que dependa de el.
+#'
+#' @return Invisiblemente TRUE si 'exams' quedo adjunto
+#' @keywords internal
+with_exams_attached <- function() {
+  if ("package:exams" %in% search()) {
+    return(invisible(TRUE))
+  }
+  attachNamespace("exams")
+  invisible(TRUE)
 }
 
 #' Construir el registro de una generacion de examenes

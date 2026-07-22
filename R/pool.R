@@ -75,6 +75,70 @@ create_question_pool <- function(questions, topics = NULL, base_dir = ".") {
   return(pool)
 }
 
+#' Crear un pool a partir de un store de preguntas
+#'
+#' Equivalente a `create_question_pool()` pero tomando las preguntas de un store
+#' en vez de un directorio. El pool queda ligado al store: `generate_exams()`
+#' materializa las preguntas a un directorio temporal en el momento de generar.
+#'
+#' Guarda los `question_id`, que en el store de MongoDB identifican la version
+#' exacta. Es lo que permite reproducir la generacion mas adelante aunque la
+#' pregunta se haya editado desde entonces.
+#'
+#' @param store Objeto question_store
+#' @param ids Identificadores de las preguntas. NULL toma todas las que devuelva
+#'   la busqueda
+#' @param section Filtrar por eje (solo si `ids` es NULL)
+#' @param tags Filtrar por tags (solo si `ids` es NULL)
+#' @param status Filtrar por estado (solo si `ids` es NULL)
+#'
+#' @return Objeto de clase "question_pool" con los campos `store` y `question_ids`
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' store <- question_store_mongo()
+#' pool <- create_pool_from_store(store, section = "logica")
+#' }
+create_pool_from_store <- function(store, ids = NULL, section = NULL,
+                                   tags = NULL, status = "published") {
+  if (is.null(ids)) {
+    encontradas <- qs_search(store, section = section, tags = tags, status = status)
+    ids <- encontradas$question_id
+    if (length(ids) == 0) {
+      stop("La busqueda no devolvio ninguna pregunta.")
+    }
+    meta <- encontradas
+  } else {
+    meta <- qs_search(store, status = NULL)
+    faltan <- setdiff(ids, meta$question_id)
+    if (length(faltan) > 0) {
+      stop(sprintf("Preguntas no encontradas en el store:\n  %s",
+                   paste("-", faltan, collapse = "\n  ")))
+    }
+    meta <- meta[match(ids, meta$question_id), , drop = FALSE]
+  }
+
+  # exams identifica el ejercicio por su nombre de archivo, que sera el slug
+  files <- paste0(meta$slug, ".Rnw")
+  topics <- ifelse(is.na(meta$section), meta$slug, meta$section)
+
+  pool <- list(
+    files = files,
+    topics = topics,
+    topic_lookup = setNames(topics, meta$slug),
+    base_dir = ".",              # se define al materializar
+    n_questions = length(files),
+    unique_topics = unique(topics),
+    store = store,
+    question_ids = ids,
+    content_hashes = meta$content_hash
+  )
+
+  class(pool) <- c("question_pool", "list")
+  pool
+}
+
 #' Inferir el eje de cada pregunta
 #'
 #' Prefiere el campo \\exsection declarado por el propio ejercicio. Cae al
@@ -124,13 +188,29 @@ infer_topics <- function(files, base_dir = ".") {
 #' @return Vector logico indicando que archivos existen
 #' @export
 validate_question_pool <- function(pool, stop_on_missing = TRUE) {
+
+  # Un pool ligado a un store se valida contra el store, no contra el disco
+  if (!is.null(pool$store)) {
+    disponibles <- qs_search(pool$store, status = NULL)$question_id
+    exists <- pool$question_ids %in% disponibles
+    faltan <- pool$question_ids[!exists]
+    if (!all(exists)) {
+      msg <- sprintf("Preguntas ausentes del store (%d):\n  %s",
+                     length(faltan), paste("-", faltan, collapse = "\n  "))
+      if (stop_on_missing) stop(msg) else warning(msg)
+    } else {
+      message(sprintf("[OK] Las %d preguntas estan en el store", pool$n_questions))
+    }
+    return(invisible(exists))
+  }
+
   full_paths <- file.path(pool$base_dir, pool$files)
   exists <- file.exists(full_paths)
-  
+
   if (!all(exists)) {
     missing <- pool$files[!exists]
-    msg <- sprintf("Archivos faltantes (%d):\n  %s", 
-                   length(missing), 
+    msg <- sprintf("Archivos faltantes (%d):\n  %s",
+                   length(missing),
                    paste("-", missing, collapse = "\n  "))
     if (stop_on_missing) {
       stop(msg)

@@ -12,7 +12,7 @@ create_exam_config(
   num_forms = 10,
   groups = NULL,
   template = "plain",
-  usepackage = c("siunitx", "amsmath"),
+  usepackage = c("siunitx", "amsmath", "csquotes"),
   header = NULL,
   output_dir = "exams",
   tex_engine = "xelatex"
@@ -34,8 +34,8 @@ create_exam_config(
 \item{template}{Template LaTeX: ruta a un .tex propio, o el nombre de un
 template de 'exams' (default: "plain")}
 
-\item{usepackage}{Paquetes LaTeX adicionales a cargar. Por defecto siunitx y
-amsmath, que es lo que usan los enunciados con \\qty y \\num}
+\item{usepackage}{Paquetes LaTeX adicionales a cargar. Por defecto siunitx,
+amsmath y csquotes, que cubren \\qty, \\num, align* y \\enquote}
 
 \item{header}{Lista de campos a pasar al template LaTeX. NULL (default)
 significa automatico: se pasa `forma` con la letra de cada version solo si

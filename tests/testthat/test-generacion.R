@@ -29,7 +29,7 @@ generate_quiet <- function(...) suppressWarnings(suppressMessages(generate_exams
 test_that("el template por defecto es utilizable", {
   config <- create_exam_config("p", 2025, 4, "Mat", num_forms = 2)
   expect_equal(config$template, "plain")
-  expect_true(all(c("siunitx", "amsmath") %in% config$usepackage))
+  expect_true(all(c("siunitx", "amsmath", "csquotes") %in% config$usepackage))
 })
 
 test_that("generate_exams produce PDFs con la configuracion por defecto", {
