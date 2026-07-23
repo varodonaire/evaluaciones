@@ -7,6 +7,18 @@
 # exams2*.
 # ==============================================================================
 
+#' Declarar una cadena como UTF-8 sin transcodificar
+#'
+#' @param x Cadena cuyos bytes ya son UTF-8 pero no lo declaran
+#'
+#' @return La cadena con encoding UTF-8
+#' @keywords internal
+mark_utf8 <- function(x) {
+  if (length(x) == 0) return(x)
+  Encoding(x) <- "UTF-8"
+  x
+}
+
 #' Extraer texto, alternativas y clave de un item ya tejido
 #'
 #' Un item de xexams trae el enunciado en `question`, las alternativas en
@@ -21,10 +33,14 @@ parse_exam_item <- function(q) {
   mi <- q$metainfo
   get_or_null <- function(x, name) if (!is.null(x[[name]])) x[[name]] else NULL
 
-  question_lines <- q$question[nzchar(q$question)]
+  # Los bytes que devuelve xexams ya son UTF-8, pero llegan sin declarar
+  # encoding. Bajo un locale no-UTF-8 (como el de un proceso Shiny servido) eso
+  # hace que las tildes se pierdan al pasar al navegador. Se DECLARA el encoding
+  # —no se transcodifica— porque los bytes ya son correctos.
+  question_lines <- mark_utf8(q$question[nzchar(q$question)])
   texto <- paste(question_lines, collapse = " ")
 
-  alternativas <- q$questionlist
+  alternativas <- mark_utf8(q$questionlist)
 
   origen <- get_or_null(mi, "name")
   if (is.null(origen)) origen <- get_or_null(mi, "file")
@@ -97,6 +113,11 @@ weave_question <- function(source, seed = NULL) {
   outdir <- tempfile("weave")
   dir.create(outdir, recursive = TRUE)
   on.exit(unlink(outdir, recursive = TRUE), add = TRUE)
+
+  # Los enunciados llevan tildes. Bajo un locale no-UTF-8 —frecuente cuando el
+  # proceso corre servido, como en Shiny— Sweave las descarta al tejer.
+  restaurar <- force_utf8_locale()
+  on.exit(restaurar(), add = TRUE)
 
   with_exams_attached()
 

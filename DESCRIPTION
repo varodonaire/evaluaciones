@@ -34,6 +34,9 @@ Suggests:
     withr,
     knitr,
     mongolite,
-    plumber
+    plumber,
+    shiny,
+    DT,
+    bslib
 Config/roxygen2/version: 8.0.0
 Config/testthat/edition: 3

@@ -20,28 +20,37 @@ get_template_path <- function(template_name) {
  return(pkg_path)
 }
 
-#' Asegurar un locale UTF-8 para los procesos hijos
+#' Asegurar un locale UTF-8
 #'
-#' Devuelve una funcion que restaura el estado anterior. Si el locale actual ya
-#' es UTF-8 no toca nada.
+#' Cubre los dos casos donde las tildes se pierden bajo un locale no-UTF-8:
+#' la variable de entorno (para procesos hijos, como Quarto) y el locale del
+#' propio proceso (para Sweave, que teje en la sesion actual). Devuelve una
+#' funcion que restaura ambos. Si ya se esta en UTF-8, no toca nada.
 #'
 #' @return Funcion de restauracion
 #' @keywords internal
 force_utf8_locale <- function() {
-  actual <- Sys.getenv("LC_ALL", unset = "")
-  if (!nzchar(actual)) {
-    actual_efectivo <- Sys.getenv("LANG", unset = "")
-  } else {
-    actual_efectivo <- actual
-  }
+  actual_env <- Sys.getenv("LC_ALL", unset = "")
+  efectivo <- if (nzchar(actual_env)) actual_env else Sys.getenv("LANG", unset = "")
+  ctype_actual <- Sys.getlocale("LC_CTYPE")
 
-  if (grepl("UTF-?8", actual_efectivo, ignore.case = TRUE)) {
+  ya_utf8 <- grepl("UTF-?8", efectivo, ignore.case = TRUE) &&
+    grepl("UTF-?8", ctype_actual, ignore.case = TRUE)
+  if (ya_utf8) {
     return(function() invisible(NULL))
   }
 
   Sys.setenv(LC_ALL = "en_US.UTF-8")
+  # Sys.setlocale afecta a la sesion en curso (lo que Sys.setenv no hace).
+  # Puede fallar si el locale no existe; en ese caso se intenta C.UTF-8.
+  aplicado <- suppressWarnings(Sys.setlocale("LC_CTYPE", "en_US.UTF-8"))
+  if (!nzchar(aplicado)) {
+    suppressWarnings(Sys.setlocale("LC_CTYPE", "C.UTF-8"))
+  }
+
   function() {
-    if (nzchar(actual)) Sys.setenv(LC_ALL = actual) else Sys.unsetenv("LC_ALL")
+    if (nzchar(actual_env)) Sys.setenv(LC_ALL = actual_env) else Sys.unsetenv("LC_ALL")
+    suppressWarnings(Sys.setlocale("LC_CTYPE", ctype_actual))
     invisible(NULL)
   }
 }

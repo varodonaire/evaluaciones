@@ -2,7 +2,7 @@
 % Please edit documentation in R/reports.R
 \name{force_utf8_locale}
 \alias{force_utf8_locale}
-\title{Asegurar un locale UTF-8 para los procesos hijos}
+\title{Asegurar un locale UTF-8}
 \usage{
 force_utf8_locale()
 }
@@ -10,7 +10,9 @@ force_utf8_locale()
 Funcion de restauracion
 }
 \description{
-Devuelve una funcion que restaura el estado anterior. Si el locale actual ya
-es UTF-8 no toca nada.
+Cubre los dos casos donde las tildes se pierden bajo un locale no-UTF-8:
+la variable de entorno (para procesos hijos, como Quarto) y el locale del
+propio proceso (para Sweave, que teje en la sesion actual). Devuelve una
+funcion que restaura ambos. Si ya se esta en UTF-8, no toca nada.
 }
 \keyword{internal}
