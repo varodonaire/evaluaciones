@@ -12,10 +12,32 @@
 #   supersedes   el _id de la version anterior
 # ==============================================================================
 
+#' URL de MongoDB por defecto
+#'
+#' Sale de la variable de entorno `EVALUACIONES_MONGO_URL` si esta definida, y
+#' cae a localhost si no. Es lo que permite que el mismo codigo apunte a
+#' `localhost` en tu maquina y a `mongo` dentro de Docker, sin cambiar nada.
+#'
+#' @return Cadena con la URI de conexion
+#' @export
+default_mongo_url <- function() {
+  Sys.getenv("EVALUACIONES_MONGO_URL", unset = "mongodb://localhost:27017")
+}
+
+#' Nombre de base de MongoDB por defecto
+#'
+#' Sale de `EVALUACIONES_MONGO_DB` si esta definida, o "evaluaciones".
+#'
+#' @return Nombre de la base
+#' @export
+default_mongo_db <- function() {
+  Sys.getenv("EVALUACIONES_MONGO_DB", unset = "evaluaciones")
+}
+
 #' Store de preguntas en MongoDB
 #'
-#' @param url URI de conexion
-#' @param db Nombre de la base
+#' @param url URI de conexion. Por defecto la de `default_mongo_url()`
+#' @param db Nombre de la base. Por defecto la de `default_mongo_db()`
 #' @param collection Nombre de la coleccion
 #'
 #' @return Objeto de clase "question_store_mongo"
@@ -26,8 +48,8 @@
 #' store <- question_store_mongo()
 #' qs_search(store, section = "logica")
 #' }
-question_store_mongo <- function(url = "mongodb://localhost:27017",
-                                 db = "evaluaciones",
+question_store_mongo <- function(url = default_mongo_url(),
+                                 db = default_mongo_db(),
                                  collection = "questions") {
   if (!requireNamespace("mongolite", quietly = TRUE)) {
     stop("El store de MongoDB necesita el paquete 'mongolite'. Instalalo con install.packages(\"mongolite\").")
@@ -57,7 +79,7 @@ mongo_conn <- function(store) {
 #'
 #' @return TRUE si se pudo conectar
 #' @export
-mongo_available <- function(url = "mongodb://localhost:27017") {
+mongo_available <- function(url = default_mongo_url()) {
   if (!requireNamespace("mongolite", quietly = TRUE)) {
     return(FALSE)
   }

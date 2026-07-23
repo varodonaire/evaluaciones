@@ -3,3 +3,7 @@
 ^\.claude$
 ^questions$
 ^exams\.(pdf|html)$
+^Dockerfile$
+^docker-compose\.yml$
+^\.dockerignore$
+^DOCKER\.md$

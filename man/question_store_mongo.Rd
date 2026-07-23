@@ -5,15 +5,15 @@
 \title{Store de preguntas en MongoDB}
 \usage{
 question_store_mongo(
-  url = "mongodb://localhost:27017",
-  db = "evaluaciones",
+  url = default_mongo_url(),
+  db = default_mongo_db(),
   collection = "questions"
 )
 }
 \arguments{
-\item{url}{URI de conexion}
+\item{url}{URI de conexion. Por defecto la de `default_mongo_url()`}
 
-\item{db}{Nombre de la base}
+\item{db}{Nombre de la base. Por defecto la de `default_mongo_db()`}
 
 \item{collection}{Nombre de la coleccion}
 }

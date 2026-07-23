@@ -5,8 +5,8 @@
 \title{Sink de resultados en MongoDB}
 \usage{
 results_sink_mongo(
-  url = "mongodb://localhost:27017",
-  db = "evaluaciones",
+  url = default_mongo_url(),
+  db = default_mongo_db(),
   runs_collection = "runs",
   responses_collection = "responses"
 )

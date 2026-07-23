@@ -1,0 +1,16 @@
+# Lo que NO entra a la imagen (mantiene el build rapido y liviano)
+.git
+.Rproj.user
+.Rhistory
+.RData
+*.Rproj
+exams.pdf
+exams.html
+reportes
+reports
+exams
+salida
+informes
+*.tar.gz
+*.Rcheck
+.claude

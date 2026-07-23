@@ -1,0 +1,77 @@
+# ==============================================================================
+# El stack completo de evaluaciones
+# ==============================================================================
+# Un solo comando lo levanta todo:
+#
+#   docker compose up --build
+#
+# Servicios:
+#   mongo    la base de datos (no expuesta a internet, solo la ven los demas)
+#   api      la API HTTP        -> http://localhost:8000
+#   editor   el editor Shiny    -> http://localhost:3838
+#
+# Los examenes y preguntas se cargan una vez con:
+#   docker compose run --rm seed
+# ==============================================================================
+
+services:
+
+  # --- Base de datos -------------------------------------------------------
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      # Los datos viven en un volumen con nombre: sobreviven a reiniciar y
+      # borrar los contenedores. Solo se pierden con `docker compose down -v`.
+      - mongo_data:/data/db
+    # A proposito NO se publica el puerto al host: solo los servicios de este
+    # compose pueden hablar con la base. Para inspeccionarla desde tu maquina,
+    # descomenta la linea de abajo.
+    # ports:
+    #   - "27017:27017"
+
+  # --- API HTTP ------------------------------------------------------------
+  api:
+    build: .
+    image: evaluaciones:latest
+    # La imagen se construye para amd64: corre nativo en cualquier servidor y
+    # emulado (mas lento) en Macs con chip Apple. Es lo que la hace portable.
+    platform: linux/amd64
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    ports:
+      - "8000:8000"
+    command: ["R", "-e", "evaluaciones::run_api(port = 8000)"]
+
+  # --- Editor de preguntas -------------------------------------------------
+  editor:
+    build: .
+    image: evaluaciones:latest
+    platform: linux/amd64
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    ports:
+      - "3838:3838"
+    command:
+      - "R"
+      - "-e"
+      - "evaluaciones::run_question_editor(evaluaciones::question_store_mongo(), host='0.0.0.0', port=3838, launch.browser=FALSE)"
+
+  # --- Carga inicial de preguntas (trabajo de una vez) ---------------------
+  # No corre con `up`; se invoca a mano:  docker compose run --rm seed
+  seed:
+    build: .
+    image: evaluaciones:latest
+    platform: linux/amd64
+    depends_on:
+      - mongo
+    profiles: ["tools"]
+    command:
+      - "R"
+      - "-e"
+      - "evaluaciones::qs_ensure_indexes(evaluaciones::question_store_mongo()); evaluaciones::qs_migrate(evaluaciones::question_store_local('/app/questions'), evaluaciones::question_store_mongo())"
+
+volumes:
+  mongo_data:

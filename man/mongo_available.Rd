@@ -4,7 +4,7 @@
 \alias{mongo_available}
 \title{Comprobar si hay un MongoDB accesible}
 \usage{
-mongo_available(url = "mongodb://localhost:27017")
+mongo_available(url = default_mongo_url())
 }
 \arguments{
 \item{url}{URI de conexion}

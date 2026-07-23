@@ -11,6 +11,10 @@ psicométrico, y emitir informes en PDF.
 > Lee [MANUAL-OPERADOR.md](MANUAL-OPERADOR.md): el ciclo completo —armar la
 > prueba, corregirla y emitir los informes— sin escribir una línea de R.
 
+> **¿Quieres el stack completo con un comando, sin instalar nada?**
+> Lee [DOCKER.md](DOCKER.md): `docker compose up` levanta el motor, la API y el
+> editor de preguntas juntos, igual en cualquier máquina.
+
 ## Instalación
 
 ```r
