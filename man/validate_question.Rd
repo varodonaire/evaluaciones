@@ -21,6 +21,6 @@ lo usa para negarse a guardar una pregunta con codigo R roto.
 }
 \examples{
 \dontrun{
-validate_question("questions/EcCuad_1.Rnw")
+validate_question("questions/Suma_1.Rnw")
 }
 }

@@ -60,8 +60,10 @@ La base arranca vacía. Para meterle tus preguntas (las de la carpeta
 docker compose run --rm seed
 ```
 
-Migra las 32 preguntas a MongoDB. Ya puedes abrir el editor en
-http://localhost:3838 y verlas.
+Migra a MongoDB todo lo que haya en `questions/`. El repositorio trae solo dos
+preguntas de muestra (`Suma_1.Rnw` y `Resta_1.Rnw`); el banco real no se
+versiona, así que copia el tuyo en esa carpeta antes de correr el `seed`. Ya
+puedes abrir el editor en http://localhost:3838 y verlas.
 
 Es idempotente: correrlo de nuevo no duplica nada.
 

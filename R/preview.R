@@ -153,8 +153,8 @@ weave_question <- function(source, seed = NULL) {
 #'
 #' @examples
 #' \dontrun{
-#' preview_question("questions/EcCuad_1.Rnw")
-#' preview_question("questions/EcCuad_1.Rnw", seed = 42, as_html = TRUE)
+#' preview_question("questions/Suma_1.Rnw")
+#' preview_question("questions/Suma_1.Rnw", seed = 42, as_html = TRUE)
 #' }
 preview_question <- function(source, seed = NULL, as_html = FALSE) {
   q <- weave_question(source, seed = seed)
@@ -213,7 +213,7 @@ render_question_html <- function(source, seed = NULL) {
 #'
 #' @examples
 #' \dontrun{
-#' validate_question("questions/EcCuad_1.Rnw")
+#' validate_question("questions/Suma_1.Rnw")
 #' }
 validate_question <- function(source, seed = NULL) {
   resultado <- tryCatch({

@@ -118,3 +118,13 @@ tmp/
 # Documentacion de referencia de R/exams (no se versiona)
 exams.pdf
 exams.html
+
+# ==============================================================================
+# Banco de preguntas
+# ==============================================================================
+# El banco real del ramo no se versiona: queda solo en la maquina del docente.
+# Se publican unicamente las dos preguntas de muestra, para que el seed de
+# Docker y los ejemplos de la documentacion sigan funcionando.
+questions/*
+!questions/Suma_1.Rnw
+!questions/Resta_1.Rnw

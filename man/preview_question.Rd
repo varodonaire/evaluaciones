@@ -26,7 +26,7 @@ pregunta sin generar un examen completo.
 }
 \examples{
 \dontrun{
-preview_question("questions/EcCuad_1.Rnw")
-preview_question("questions/EcCuad_1.Rnw", seed = 42, as_html = TRUE)
+preview_question("questions/Suma_1.Rnw")
+preview_question("questions/Suma_1.Rnw", seed = 42, as_html = TRUE)
 }
 }

@@ -15,6 +15,15 @@ psicométrico, y emitir informes en PDF.
 > Lee [DOCKER.md](DOCKER.md): `docker compose up` levanta el motor, la API y el
 > editor de preguntas juntos, igual en cualquier máquina.
 
+> **Sobre el banco de preguntas**
+> Este repositorio publica el motor, no los ítems. En `questions/` vienen solo
+> dos preguntas de muestra (`Suma_1.Rnw` y `Resta_1.Rnw`), suficientes para
+> probar la generación, el editor y el `seed` de Docker. El banco real del ramo
+> se mantiene fuera del repositorio, por la razón evidente: una pregunta con su
+> alternativa correcta deja de servir el día en que es pública. Pon las tuyas en
+> esa misma carpeta siguiendo el formato de `exams` que se describe en
+> [Ejes temáticos](#ejes-temáticos).
+
 ## Instalación
 
 ```r

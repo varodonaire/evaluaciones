@@ -4,8 +4,8 @@ Title: Generacion y Revision de Pruebas Educativas
 Version: 0.2.0
 Authors@R: c(
     person(
-      "Alvaro", "Mattus-Donaire",
-      email = "varodonaire@me.com",
+      "Alvaro", "Mattus Donaire",
+      email = "varodonaire@users.noreply.github.com",
       role = c("aut", "cre")
     )
   )
